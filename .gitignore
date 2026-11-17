@@ -70,3 +70,4 @@ temp/
 # 数据与产物不入库
 output/
 data/
+config/config_*.yaml
