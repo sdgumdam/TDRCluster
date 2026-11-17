@@ -344,11 +344,13 @@ action=merge means the best candidate absorbs this evidence (fill target_id); ac
                     }
             print(f"   ✅ {cluster.id} create 经 LLM 裁决确认新建")
         except Exception as exc:
-            print(f"   ⚠️ 吸收裁决 LLM 失败({str(exc)[:80]}), 退回几何判定")
-            best_id, best_sim = top[0][0], top[0][2]
-            if best_sim >= 0.9:
-                return {"action": "merge", "target_id": best_id,
-                        "reason": f"裁决失败退回几何: 相似度 {best_sim:.3f}"}
+            # 原设计无几何 fallback: 错误 merge 会毒化分类树(难撤销),
+            # 裁决失败 → 残差(可见可复查), 绝不静默自动 merge
+            print(f"   ⚠️ 吸收裁决 LLM 失败({str(exc)[:80]}), 记残待查")
+            return {
+                "action": "residual",
+                "reason": f"吸收裁决失败: {str(exc)[:100]}",
+            }
         return decision
 
     def merge_node(self, state: GraphState) -> Dict[str, Any]:
