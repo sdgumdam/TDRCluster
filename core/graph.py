@@ -5,6 +5,7 @@ LangGraph流程编排模块
 import re
 from typing import List, Dict, Any, Tuple
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 
 from langgraph.graph import StateGraph, END
 
