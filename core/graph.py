@@ -357,22 +357,30 @@ action=merge means the best candidate absorbs this evidence (fill target_id); ac
         """Phase B: 串行归并提案 — 持有完整当前态的 curator 应用"""
         proposals = state.get("proposals") or []
         print(f"🟢 Phase B 串行归并: {len(proposals)} 条提案")
+        deferred_inspect = []
         for cluster, judge in proposals:
             if judge is None:
                 record_residual_cluster_tool(state, cluster, "LLM提案失败(并行阶段)")
                 continue
             action = (judge.get("action") or "").lower()
             try:
+                if action == "inspect":
+                    # superstep 微同步点: inspect 簇追加取证后顺延下一波,
+                    # 重提案时看到的是已合并本波决策的实时树
+                    self._handle_inspect_request(state, cluster, judge.get("reason", "need_more_evidence"))
+                    deferred_inspect.append(cluster)
+                    continue
                 if action == "create":
                     judge = self._resolve_create_collision(state, cluster, judge)
                     action = judge["action"]
                 self._apply_decision(state, cluster, judge)
             except Exception as exc:
                 record_residual_cluster_tool(state, cluster, f"提案应用失败: {str(exc)[:120]}")
+        remaining = list(state.get("clusters_list") or []) + deferred_inspect
         return {
             "tasks": state.get("tasks", deque()),
             "categories": state.get("categories", {}),
-            "clusters_list": state.get("clusters_list", []),
+            "clusters_list": remaining,
             "current_cluster": None,
             "residual_clusters": state.get("residual_clusters", []),
             "proposals": [],
