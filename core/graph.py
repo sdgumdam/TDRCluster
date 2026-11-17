@@ -245,7 +245,37 @@ class TDRClusterGraph:
             create_category_display_dict(c) for c in categories.values()
         ]
         max_workers = int(CONFIG.get("runtime", {}).get("review_concurrency", 16) or 16)
-        print(f"🟣 Phase A 并行提案: {len(clusters)} 簇 × {max_workers} 并发 (快照冻结于 {len(frozen)} 类)")
+        # 顺延簇(create_deferrals>0 或已有取证轮)走【串行子流程】: 逐簇对照实时树 analyze+立即应用,
+        # 原始串行语义精确恢复(每簇看到前簇应用后的树) — 信息损失为零; 并行只服务首次提案。
+        serial_first = [c for c in clusters if getattr(c, "create_deferrals", 0) > 0 or c.evidence_rounds]
+        parallel_clusters = [c for c in clusters if c not in serial_first]
+        print(f"🟣 Phase A: 并行提案 {len(parallel_clusters)} 簇 × {max_workers} 并发 (快照冻结于 {len(frozen)} 类); 串行子流程 {len(serial_first)} 簇(实时树逐簇)")
+
+        results = {}
+        for cluster in serial_first:
+            # 串行子流程: 每簇现读实时树, 决策立即应用(与原始 reviewer/dispatcher 等价)
+            live = [create_category_display_dict(c) for c in state.get("categories", {}).values()]
+            try:
+                judge = self.llm_service.analyze_cluster_with_retry(
+                    live, create_cluster_display_dict(cluster)
+                )
+            except Exception as exc:
+                print(f"   ⚠️ {cluster.id} 串行提案失败: {str(exc)[:120]}")
+                judge = None
+            action = (judge or {}).get("action", "").lower()
+            try:
+                if action == "inspect":
+                    self._handle_inspect_request(state, cluster, judge.get("reason", "need_more_evidence"))
+                    deferred.append(cluster)
+                    continue
+                if action == "create" and cluster.create_deferrals == 0:
+                    cluster.create_deferrals = 1
+                    deferred.append(cluster)
+                    print(f"   🔀 {cluster.id} create 顺延(再入串行子流程)")
+                    continue
+                self._apply_decision(state, cluster, judge)
+            except Exception as exc:
+                record_residual_cluster_tool(state, cluster, f"串行应用失败: {str(exc)[:120]}")
 
         def propose(cluster: MicroCluster):
             try:
@@ -258,11 +288,10 @@ class TDRClusterGraph:
                 print(f"   ⚠️ {cluster.id} 提案失败: {str(exc)[:120]}")
                 return cluster.id, (cluster, None)
 
-        results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            for cid, pair in pool.map(propose, clusters):
+            for cid, pair in pool.map(propose, parallel_clusters):
                 results[cid] = pair
-        proposals = [results[c.id] for c in clusters if c.id in results]
+        proposals = [results[c.id] for c in parallel_clusters if c.id in results]
         return {"proposals": proposals, "clusters_list": deferred, **unchanged}
 
     def merge_node(self, state: GraphState) -> Dict[str, Any]:
@@ -282,15 +311,13 @@ class TDRClusterGraph:
                     self._handle_inspect_request(state, cluster, judge.get("reason", "need_more_evidence"))
                     deferred_inspect.append(cluster)
                     continue
-                if action == "create":
-                    # create 一律顺延一波(唯一新增规则): 下一波以原始全上下文 prompt
-                    # 对实时树重提案, TDR 自己的判据裁决 merge-or-create。
-                    # 无检测/无阈值/无质心/无候选组; 重提案后再 create 按判定直接应用(终止规则)。
-                    if getattr(cluster, "create_deferrals", 0) == 0:
-                        cluster.create_deferrals = 1
-                        deferred_inspect.append(cluster)
-                        print(f"   🔀 {cluster.id} create 顺延下一波(实时树重提案)")
-                        continue
+                if action == "create" and cluster.create_deferrals == 0:
+                    # create 顺延: 进入下一波的【串行子流程】(逐簇 analyze 实时树+立即 apply),
+                    # 原始语义无损恢复; 串行子流程中再 create 按判定直接应用(其可见性=原始串行)。
+                    cluster.create_deferrals = 1
+                    deferred_inspect.append(cluster)
+                    print(f"   🔀 {cluster.id} create 顺延(下一波串行子流程)")
+                    continue
                 self._apply_decision(state, cluster, judge)
             except Exception as exc:
                 record_residual_cluster_tool(state, cluster, f"提案应用失败: {str(exc)[:120]}")
