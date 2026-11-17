@@ -101,8 +101,17 @@ class LLMService:
                 last_result = validation_result
 
             except Exception as e:
-                print(f"❌ {log_label}调用失败: {str(e)}")
-                last_result = {"valid": False, "error_message": str(e)}
+                msg = str(e)
+                print(f"❌ {log_label}调用失败: {msg}")
+                if "inappropriate content" in msg or "400" in msg and "content" in msg:
+                    # 内容审核拒绝: 同内容重试必然同拒 — 簇级终态, 不炸全局
+                    print("⛔ 内容审核拒绝, 该簇转残差")
+                    return {
+                        "id": cluster_ids[0],
+                        "action": "moderation_rejected",
+                        "reason": f"网关内容审核拒绝: {msg[:120]}",
+                    }
+                last_result = {"valid": False, "error_message": msg}
         else:
             raise RuntimeError(f"LLM响应验证连续失败，最后错误: {last_result['error_message']}")
 

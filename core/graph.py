@@ -326,6 +326,10 @@ class TDRClusterGraph:
                 current_cluster,
                 decision.get("reason", "semantic_impurity"),
             )
+        elif action == "moderation_rejected":
+            record_residual_cluster_tool(
+                state, current_cluster, decision.get("reason", "内容审核拒绝")
+            )
         elif action == "inspect":
             raise ValueError("inspect 应在上层单独处理")
         else:
