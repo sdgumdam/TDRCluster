@@ -322,9 +322,11 @@ class TDRClusterGraph:
         重提案时 LLM 用全量实时分类树+原始判据裁决 merge-or-create。"""
         action = decision.get("action", "").lower()
         print(f"   处理 {current_cluster.id}: {action}")
-        if action == "create" and current_cluster.create_deferrals == 0:
+        if action in ("create", "merge") and current_cluster.create_deferrals == 0:
+            # 信息需求分层: create/merge 的选项集=全量实时树(信息关键型),
+            # 盲提有损 → 顺延重提案; split/inspect 簇内自足 → 直接应用
             current_cluster.create_deferrals = 1
-            print(f"   🔀 {current_cluster.id} create 顺延(实时树重提案)")
+            print(f"   🔀 {current_cluster.id} {action} 顺延(实时树重提案)")
             return "deferred"
         if action == "create":
             create_new_category_tool(state, current_cluster, decision)
