@@ -30,7 +30,10 @@ class EmbeddingService:
         try:
             if self.api_style == 'local':
                 import os
-                os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+                # 本地权重从不联网 — 离线为代码级默认(单一真源, 不依赖调用方env传递);
+                # env 传 0 可显式放开(仅首次下载新模型时需要)
+                os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
                 from sentence_transformers import SentenceTransformer
                 self.local_model = SentenceTransformer(
                     self.config.get('model_name', 'BAAI/bge-small-zh-v1.5'),
@@ -53,13 +56,7 @@ class EmbeddingService:
             elif self.api_style == 'ark_multimodal':
                 self.client = True
             elif self.api_style == 'local':
-                import os
-                os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
-                from sentence_transformers import SentenceTransformer
-                self.local_model = SentenceTransformer(
-                    self.config.get('model_name', 'BAAI/bge-small-zh-v1.5'),
-                    device=self.config.get('device', 'mps'),
-                )
+                raise RuntimeError("local 分支已在上方处理, 不可达")
             else:
                 raise ValueError(f"不支持的embedding api_style: {self.api_style}")
 

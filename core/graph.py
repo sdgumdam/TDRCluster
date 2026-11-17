@@ -35,7 +35,7 @@ class TDRClusterGraph:
         workflow = StateGraph(GraphState)
 
         if CONFIG.get("runtime", {}).get("review_mode", "serial") == "two_phase":
-            # 无信息损失并发: 并行孤立内容分析(无树) + 串行LLM仲裁(全量实时树)
+            # 无信息损失并发: 并行簇内自足分析(split门,无树) + 纯簇走原生serial reviewer(全量实时树)
             workflow.add_node("splitter", self.splitter_node)
             workflow.add_node("analyze", self.analyze_node)
             workflow.add_node("resolve", self.resolve_node)
@@ -218,7 +218,7 @@ class TDRClusterGraph:
         }
 
 
-    # ---------- two_phase: 并行纯内容分析(无树,零盲窗) + 串行LLM仲裁(全量实时树) ----------
+    # ---------- two_phase: 并行簇内自足分析(split门) + 纯簇走原生serial reviewer ----------
 
     def analyze_node(self, state: GraphState) -> Dict[str, Any]:
         """Phase A: 全簇并发孤立内容分析 — 不输入分类树, 无共享状态, 零盲窗"""
@@ -251,32 +251,38 @@ class TDRClusterGraph:
         return {"analyses": analyses, **unchanged}
 
     def resolve_node(self, state: GraphState) -> Dict[str, Any]:
-        """Phase B: 串行仲裁 — 每簇均过 LLM 仲裁(全量实时树, 决策空间 create|merge|split|inspect
-        与 serial 同构), 分析仅作证据; 即决即用, inspect 回流再分析, 树逐步演进(零盲窗)"""
+        """Phase B(串行): impure(簇内自足判定)代码回炉重切 — 并行原语;
+        pure 走原生 serial reviewer(全量实时树, create/merge/split/inspect 全决策空间,
+        与 serial 模式同一函数同一 prompt — 同构 by construction, 零新语义面)"""
         analyses = state.get("analyses") or []
-        print(f"⚖️ 串行仲裁: {len(analyses)} 条分析")
+        print(f"⚖️ 串行评审: {len(analyses)} 条分析")
         remaining = list(state.get("clusters_list") or [])
         for cluster, analysis in analyses:
             if analysis is None:
                 record_residual_cluster_tool(state, cluster, "内容分析失败(并行阶段)")
                 continue
+            purity = (analysis.get("purity") or "").lower()
+            if purity == "impure":
+                enqueue_resplit_task_tool(
+                    state, cluster, analysis.get("split_reason") or "semantic_impurity"
+                )
+                continue
             finalized = [
                 create_category_display_dict(c) for c in state["categories"].values()
             ]
             try:
-                decision = self.llm_service.arbitrate_with_tree(
-                    finalized, create_cluster_display_dict(cluster), analysis
+                cluster.judge = self.llm_service.analyze_cluster_with_retry(
+                    finalized, create_cluster_display_dict(cluster)
                 )
-                action = (decision.get("action") or "").lower()
+                action = (cluster.judge.get("action") or "").lower()
                 if action == "inspect":
-                    updated = self._handle_inspect_request(
-                        state, cluster, decision.get("reason", "need_more_evidence")
-                    )
-                    remaining = updated + remaining
+                    remaining = self._handle_inspect_request(
+                        state, cluster, cluster.judge.get("reason", "need_more_evidence")
+                    ) + remaining
                     continue
-                self._apply_decision(state, cluster, decision)
+                self._apply_decision(state, cluster, cluster.judge)
             except Exception as exc:
-                record_residual_cluster_tool(state, cluster, f"仲裁失败: {str(exc)[:120]}")
+                record_residual_cluster_tool(state, cluster, f"评审失败: {str(exc)[:120]}")
         return {
             "tasks": state.get("tasks", deque()),
             "categories": state.get("categories", {}),
@@ -300,7 +306,7 @@ class TDRClusterGraph:
 
     def _apply_decision(self, state: GraphState, current_cluster: MicroCluster, decision: Dict[str, Any]):
         """决策应用(串行/并发共用): 原 dispatcher_node 决策体。
-        serial 与 two_phase 仲裁提案均基于全量实时树, 即决即用, 无顺延。"""
+        serial 与 two_phase 评审均基于全量实时树, 即决即用, 无顺延。"""
         action = decision.get("action", "").lower()
         print(f"   处理 {current_cluster.id}: {action}")
         if action == "create":

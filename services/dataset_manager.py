@@ -1,6 +1,7 @@
 """
 数据集管理器
 """
+import json
 import os
 import pickle
 import pandas as pd
@@ -31,6 +32,8 @@ class DatasetManager:
         self.processed_path.mkdir(parents=True, exist_ok=True)
 
         self.embedding_service = EmbeddingService()
+        # 追加式断点: 各数据集已持久化到的行号(append块只写增量)
+        self._persisted_upto: Dict[str, int] = {}
 
     def _embedding_model_stamp(self) -> Dict[str, str]:
         """当前 embedding 模型身份(换模型必须重建缓存, 防止静默混用两个向量空间)"""
@@ -122,51 +125,122 @@ class DatasetManager:
 
         return renamed
 
-    def _progress_file(self, dataset_name: str) -> Path:
+    def _append_file(self, dataset_name: str) -> Path:
+        processed_dir = self.processed_path / dataset_name
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        return processed_dir / f"{dataset_name}_embedding_progress.append.pkl"
+
+    def _progress_meta_file(self, dataset_name: str) -> Path:
+        processed_dir = self.processed_path / dataset_name
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        return processed_dir / f"{dataset_name}_embedding_progress.meta.json"
+
+    def _legacy_progress_file(self, dataset_name: str) -> Path:
         processed_dir = self.processed_path / dataset_name
         processed_dir.mkdir(parents=True, exist_ok=True)
         return processed_dir / f"{dataset_name}_embedding_progress.pkl"
 
+    def _discard_progress(self, dataset_name: str, why: str) -> Dict[str, Any]:
+        print(f"   ⚠️ 断点缓存{why}, 丢弃重建")
+        for f in (self._append_file(dataset_name), self._progress_meta_file(dataset_name)):
+            if f.exists():
+                f.unlink()
+        self._persisted_upto[dataset_name] = 0
+        return {"next_index": 0, "data": []}
+
     def _load_embedding_progress(self, dataset_name: str) -> Dict[str, Any]:
-        progress_file = self._progress_file(dataset_name)
-        if not progress_file.exists():
-            return {"next_index": 0, "data": []}
+        append_file = self._append_file(dataset_name)
+        meta_file = self._progress_meta_file(dataset_name)
 
+        if append_file.exists():
+            try:
+                data: List[Dict[str, Any]] = []
+                with open(append_file, "rb") as file:
+                    while True:
+                        try:
+                            data.extend(pickle.load(file))
+                        except EOFError:
+                            break
+                meta = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.exists() else {}
+                stamp = meta.get("model")
+                if stamp is not None and stamp != self._embedding_model_stamp():
+                    return self._discard_progress(dataset_name, f"来自其他模型({stamp})")
+                next_index = int(meta.get("next_index", len(data)))
+                # 崩溃窗口恢复(不全量丢弃): append 只在 covered(连续前缀)推进时写入,
+                # data 恒为 0..len-1 连续行。meta 落后(append已fsync,meta未写)以 append 为准;
+                # 尾块撕裂(pickle异常)由外层 except 兜底。
+                if len(data) != next_index:
+                    print(f"   ℹ️ 断点 meta({next_index})与 append({len(data)})不一致, 以 append 为准")
+                    next_index = len(data)
+                if data and (data[0].get("row_index", 0) != 0 or data[-1].get("row_index", -1) != len(data) - 1):
+                    return self._discard_progress(dataset_name, "行序不连续(数据异常)")
+                self._persisted_upto[dataset_name] = next_index
+                print(f"   检测到embedding断点缓存: 已完成 {next_index} 条")
+                return {"next_index": next_index, "data": data}
+            except Exception as exc:
+                return self._discard_progress(dataset_name, f"损坏({exc})")
+
+        # 旧全量pkl一次性迁移到追加式(读入后改名.bak, 之后永不重写)
+        legacy_file = self._legacy_progress_file(dataset_name)
+        if not legacy_file.exists():
+            self._persisted_upto[dataset_name] = 0
+            return {"next_index": 0, "data": []}
         try:
-            with open(progress_file, "rb") as file:
+            with open(legacy_file, "rb") as file:
                 progress = pickle.load(file)
+            stamp = progress.get("model")
+            if stamp is not None and stamp != self._embedding_model_stamp():
+                legacy_file.unlink()
+                self._persisted_upto[dataset_name] = 0
+                return {"next_index": 0, "data": []}
+            next_index = int(progress.get("next_index", 0))
+            data = progress.get("data", [])
+            if next_index != len(data):
+                raise ValueError(f"next_index={next_index} != len(data)={len(data)}")
+            with open(append_file, "wb") as file:
+                pickle.dump(data, file, protocol=4)
+                file.flush()
+                os.fsync(file.fileno())
+            meta_file.write_text(json.dumps({
+                "model": self._embedding_model_stamp(),
+                "next_index": next_index,
+            }, ensure_ascii=False), encoding="utf-8")
+            os.replace(legacy_file, legacy_file.with_suffix(".pkl.migrated"))
+            self._persisted_upto[dataset_name] = next_index
+            print(f"   旧断点pkl已迁移为追加式: 已完成 {next_index} 条")
+            return {"next_index": next_index, "data": data}
         except Exception as exc:
-            # 缓存损坏(pkill 打断写入等): 缓存只能加速, 绝不让 run 崩溃 — 丢弃重建
-            print(f"   ⚠️ 进度缓存损坏({exc}), 丢弃重建")
+            print(f"   ⚠️ 旧断点pkl损坏({exc}), 丢弃重建")
+            legacy_file.unlink(missing_ok=True)
+            self._persisted_upto[dataset_name] = 0
             return {"next_index": 0, "data": []}
-        stamp = progress.get("model")
-        if stamp is not None and stamp != self._embedding_model_stamp():
-            print(f"   ⚠️ 进度缓存来自其他模型({stamp}), 丢弃重建")
-            return {"next_index": 0, "data": []}
-
-        next_index = int(progress.get("next_index", 0))
-        data = progress.get("data", [])
-        print(f"   检测到embedding断点缓存: 已完成 {next_index} 条")
-        return {"next_index": next_index, "data": data}
 
     def _save_embedding_progress(self, dataset_name: str, next_index: int, data: List[Dict[str, Any]]):
-        progress_file = self._progress_file(dataset_name)
-        # 原子写(tmp+rename): 进程被杀时绝不留下截断的 pkl(与 viewer/import_to_mongo 同范式)
-        tmp_file = progress_file.with_suffix(".pkl.tmp")
-        with open(tmp_file, "wb") as file:
-            pickle.dump({
-                "next_index": next_index,
-                "data": data,
-                "model": self._embedding_model_stamp(),
-            }, file)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(tmp_file, progress_file)
+        """追加式: 只把未持久化的记录块追加进 append 文件(O(每批)), meta(json小文件)原子重写"""
+        persisted = self._persisted_upto.get(dataset_name, 0)
+        if next_index > persisted:
+            with open(self._append_file(dataset_name), "ab") as file:
+                pickle.dump(data[persisted:next_index], file, protocol=4)
+                file.flush()
+                os.fsync(file.fileno())
+            self._persisted_upto[dataset_name] = next_index
+        meta_file = self._progress_meta_file(dataset_name)
+        tmp_file = meta_file.with_suffix(".json.tmp")
+        tmp_file.write_text(json.dumps({
+            "model": self._embedding_model_stamp(),
+            "next_index": next_index,
+        }, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp_file, meta_file)
 
     def _clear_embedding_progress(self, dataset_name: str):
-        progress_file = self._progress_file(dataset_name)
-        if progress_file.exists():
-            progress_file.unlink()
+        for f in (
+            self._append_file(dataset_name),
+            self._progress_meta_file(dataset_name),
+            self._legacy_progress_file(dataset_name),
+        ):
+            if f.exists():
+                f.unlink()
+        self._persisted_upto[dataset_name] = 0
 
     def generate_embeddings(self, dataset_name: str, force_regenerate: bool = False) -> str:
         """
@@ -199,8 +273,8 @@ class DatasetManager:
 
         print("   开始生成embeddings...")
 
-        progress_file = self._progress_file(dataset_name)
-        if force_regenerate and progress_file.exists():
+        legacy_file = self._legacy_progress_file(dataset_name)
+        if force_regenerate and (legacy_file.exists() or self._append_file(dataset_name).exists()):
             self._clear_embedding_progress(dataset_name)
 
         progress = self._load_embedding_progress(dataset_name)

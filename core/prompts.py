@@ -43,17 +43,9 @@ Core principles:
 - Follow the dominant language of the existing taxonomy and cluster samples when writing names, definitions, and boundary notes. If the taxonomy already has a dominant language, stay consistent with it.
 - Return exactly one XML <decisions> block and nothing else."""
 
-def _action_rules_block(allow_inspect: bool) -> str:
-    """create/merge/split(/inspect) 决策规则块 — serial review 与 two_phase 仲裁共用唯一真源"""
-    inspect_rule = """
-    - inspect:
-      Use only when the currently shown evidence is still insufficient for a reliable create, merge, or split decision,
-      and one more round of evidence is likely to materially change your judgment.
-      You must provide:
-      - reason""" if allow_inspect else """
-    - inspect:
-      Not allowed in this final review. You must choose create, merge, or split."""
-    return f"""
+def _create_merge_rules_block() -> str:
+    """create/merge 决策规则块(树依赖原语) — 文本与 serial 完整块中同两条逐字一致, 唯一真源"""
+    return """
     - create:
       Use when this micro-cluster expresses a new intent that is not covered by the current taxonomy.
       Only create when the intent is stable and reusable beyond these specific examples.
@@ -72,7 +64,19 @@ def _action_rules_block(allow_inspect: bool) -> str:
       - boundary_update
       Use "no_update" for any field that does not need revision.
       Only update the name when the existing name has become too narrow or inaccurate after the merge.
+"""
 
+def _action_rules_block(allow_inspect: bool) -> str:
+    """serial 决策规则块 = create/merge 共享块 + split(/inspect)"""
+    inspect_rule = """
+    - inspect:
+      Use only when the currently shown evidence is still insufficient for a reliable create, merge, or split decision,
+      and one more round of evidence is likely to materially change your judgment.
+      You must provide:
+      - reason""" if allow_inspect else """
+    - inspect:
+      Not allowed in this final review. You must choose create, merge, or split."""
+    return f"""{_create_merge_rules_block()}
     - split:
       Use when this micro-cluster is still semantically mixed and should be sent back for another round of physical splitting.
       Do not use split merely to chase a finer taxonomy.
@@ -81,7 +85,7 @@ def _action_rules_block(allow_inspect: bool) -> str:
 {inspect_rule}
 """
 def _decision_format_block(action_schema: str) -> str:
-    """<decisions> XML 输出格式块 — serial review 与 two_phase 仲裁共用唯一真源"""
+    """<decisions> XML 输出格式块 — serial review 唯一真源"""
     return f"""<format_requirements>
   Your response must be a single XML block with <decisions> as the root element.
   It must contain exactly one <decision>.
@@ -301,7 +305,7 @@ def create_cluster_display_dict(cluster: MicroCluster) -> Dict[str, Any]:
         "inspect_stop_reason": cluster.inspect_stop_reason,
     }
 
-# ---------- two_phase: 并行纯内容分析(无树) + 串行LLM仲裁(全量实时树) ----------
+# ---------- two_phase Phase A: 单簇纯内容分析(无树输入) ----------
 
 
 def create_content_analysis_system_prompt() -> str:
@@ -348,62 +352,3 @@ def create_content_analysis_prompt(cluster_to_review: Dict[str, Any]) -> str:
 Please provide your analysis now in the required XML format:"""
 
 
-def create_arbitration_system_prompt() -> str:
-    return (
-        "You are the taxonomy arbiter. Existing categories evolve as clusters are decided, "
-        "and you always see the full current taxonomy. For each micro-cluster presented "
-        "together with an isolated content analysis, you decide exactly one action: "
-        "create, merge, split, or inspect. "
-        "Respond in the exact XML format requested."
-    )
-
-
-def create_arbitration_prompt(
-    finalized_categories: List[Dict[str, Any]],
-    cluster_to_review: Dict[str, Any],
-    analysis: Dict[str, Any],
-) -> str:
-    """two_phase Phase B: 串行仲裁 — 与 serial reviewer 同视野(全量实时树+簇证据)同决策空间,
-    并行阶段的孤立内容分析仅作证据; 决策空间 create|merge|split|inspect 与 serial 同构"""
-    from config.config_loader import CONFIG
-
-    allow_inspect = bool(cluster_to_review.get("allow_inspect", True))
-    action_text = "create, merge, split, or inspect" if allow_inspect else "create, merge, or split"
-    action_schema = "create|merge|split|inspect" if allow_inspect else "create|merge|split"
-    runtime_config = CONFIG.get("runtime", {})
-    taxonomy_context = runtime_config.get("taxonomy_context")
-    context_xml = _create_context_block(taxonomy_context)
-    existing_categories_xml = _create_existing_categories_block(finalized_categories)
-    cluster_xml = _create_cluster_block(cluster_to_review)
-    review_state_xml = _create_review_state_block(cluster_to_review)
-
-    return f"""{context_xml}{existing_categories_xml}
-<task>
-  <instruction>
-    An isolated content analysis (produced without taxonomy visibility) examined the single
-    micro-cluster below. Decide exactly ONE action: {action_text}.
-
-    Decision rules:
-{_action_rules_block(allow_inspect)}
-
-    The content analysis is advisory evidence, not a decision: the full current taxonomy
-    above is authoritative for absorption judgment.
-
-    Hard constraints:
-    - Review exactly one micro-cluster in this call.
-    - Return exactly one <decision> referencing exactly one micro-cluster id.
-  </instruction>
-
-  <content_analysis>
-    <summary>{_xml_text(analysis.get('summary', ''))}</summary>
-    <candidate_label>{_xml_text(analysis.get('candidate_label', ''))}</candidate_label>
-    <candidate_definition>{_xml_text(analysis.get('candidate_definition', ''))}</candidate_definition>
-  </content_analysis>
-
-  {review_state_xml}
-  {cluster_xml}
-</task>
-
-{_decision_format_block(action_schema)}
-
-Please provide your decision now in the required XML format:"""

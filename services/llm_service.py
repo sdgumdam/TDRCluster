@@ -76,7 +76,7 @@ class LLMService:
         max_retries: int = 3,
         log_label: str = "LLM reviewer",
     ) -> Dict[str, Any]:
-        """共享重试+XML校验循环: 单簇决策调用(serial reviewer 与 two_phase 仲裁共用)"""
+        """共享重试+XML校验循环: 单簇决策调用(serial reviewer)"""
         last_result = {"valid": False, "error_message": "unknown"}
         for attempt in range(max_retries + 1):
             if attempt == 0:
@@ -353,27 +353,3 @@ class LLMService:
             raise ValueError("summary/candidate_label 不能为空")
         return analysis
 
-    def arbitrate_with_tree(
-        self,
-        finalized_categories: List[Dict[str, Any]],
-        cluster_to_review: Dict[str, Any],
-        analysis: Dict[str, Any],
-        max_retries: int = 3,
-    ) -> Dict[str, Any]:
-        """two_phase Phase B: 串行仲裁(全量实时树), 决策空间与 serial 同构(create|merge|split|inspect)"""
-        from core.prompts import create_arbitration_prompt, create_arbitration_system_prompt
-
-        print(f"⚖️ 仲裁 {cluster_to_review.get('id')} (实时树 {len(finalized_categories)} 类) ...")
-        decision = self._decide_with_retry(
-            create_arbitration_prompt(finalized_categories, cluster_to_review, analysis),
-            create_arbitration_system_prompt(),
-            [cluster_to_review["id"]],
-            {cat["id"]: cat for cat in finalized_categories},
-            allow_inspect=bool(cluster_to_review.get("allow_inspect", True)),
-            max_retries=max_retries,
-            log_label="仲裁",
-        )
-        action = (decision.get("action") or "").lower()
-        if action not in ("create", "merge", "split", "inspect"):
-            raise RuntimeError(f"仲裁只允许 create|merge|split|inspect，实际: {action}")
-        return decision
