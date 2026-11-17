@@ -290,7 +290,7 @@ class TDRClusterGraph:
                     self._handle_inspect_request(state, cluster, judge.get("reason", "need_more_evidence"))
                     remaining.append(cluster)
                     continue
-                applied = self._apply_decision(state, cluster, judge)
+                applied = self._apply_decision(state, cluster, judge, defer_blind=True)
                 if applied == "deferred":
                     remaining.append(cluster)
             except Exception as exc:
@@ -316,15 +316,13 @@ class TDRClusterGraph:
         print("   队列为空, 结束流程")
         return "end"
 
-    def _apply_decision(self, state: GraphState, current_cluster: MicroCluster, decision: Dict[str, Any]):
+    def _apply_decision(self, state: GraphState, current_cluster: MicroCluster, decision: Dict[str, Any], defer_blind: bool = False):
         """决策应用(串行/两相共用): 原 dispatcher_node 决策体。
-        唯一新增规则: create 首次出现顺延(返回 'deferred'), 由调用方回流重提案 —
-        重提案时 LLM 用全量实时分类树+原始判据裁决 merge-or-create。"""
+        two_phase(defer_blind=True)时 create/merge 首次顺延重提案(盲窗补偿);
+        serial 提案本就基于实时树, 直接应用 — 不顺延(serial回归修复)。"""
         action = decision.get("action", "").lower()
         print(f"   处理 {current_cluster.id}: {action}")
-        if action in ("create", "merge") and current_cluster.create_deferrals == 0:
-            # 信息需求分层: create/merge 的选项集=全量实时树(信息关键型),
-            # 盲提有损 → 顺延重提案; split/inspect 簇内自足 → 直接应用
+        if defer_blind and action in ("create", "merge") and current_cluster.create_deferrals == 0:
             current_cluster.create_deferrals = 1
             print(f"   🔀 {current_cluster.id} {action} 顺延(实时树重提案)")
             return "deferred"
