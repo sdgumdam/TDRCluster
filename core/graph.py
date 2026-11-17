@@ -33,6 +33,21 @@ class TDRClusterGraph:
     def _build_graph(self) -> StateGraph:
         workflow = StateGraph(GraphState)
 
+        if CONFIG.get("runtime", {}).get("review_mode", "serial") == "two_phase":
+            workflow.add_node("splitter", self.splitter_node)
+            workflow.add_node("propose", self.propose_node)
+            workflow.add_node("merge", self.merge_node)
+
+            workflow.set_entry_point("splitter")
+            workflow.add_edge("splitter", "propose")
+            workflow.add_edge("propose", "merge")
+            workflow.add_conditional_edges(
+                "merge",
+                self._should_continue_two_phase,
+                {"split_more": "splitter", "end": END},
+            )
+            return workflow.compile()
+
         workflow.add_node("splitter", self.splitter_node)
         workflow.add_node("reviewer", self.reviewer_node)
         workflow.add_node("dispatcher", self.dispatcher_node)
@@ -173,24 +188,7 @@ class TDRClusterGraph:
         print(f"   处理 {current_cluster.id}: {action}")
 
         try:
-            if action == "create":
-                create_new_category_tool(state, current_cluster, decision)
-            elif action == "merge":
-                merge_into_existing_category_tool(
-                    state,
-                    current_cluster,
-                    decision["target_id"],
-                    decision.get("name_update", "no_update"),
-                    decision.get("definition_update", "no_update"),
-                    decision.get("boundary_update", "no_update"),
-                )
-            elif action == "split":
-                enqueue_resplit_task_tool(
-                    state,
-                    current_cluster,
-                    decision.get("reason", "semantic_impurity"),
-                )
-            elif action == "inspect":
+            if action == "inspect":
                 updated_clusters = self._handle_inspect_request(
                     state,
                     current_cluster,
@@ -204,7 +202,7 @@ class TDRClusterGraph:
                     "residual_clusters": state.get("residual_clusters", []),
                 }
             else:
-                record_residual_cluster_tool(state, current_cluster, f"未知动作: {action}")
+                self._apply_decision(state, current_cluster, decision)
         except Exception as e:
             record_residual_cluster_tool(state, current_cluster, f"处理失败: {str(e)}")
 
@@ -215,6 +213,151 @@ class TDRClusterGraph:
             "current_cluster": None,
             "residual_clusters": state.get("residual_clusters", []),
         }
+
+
+    # ---------- 两相评审(two_phase): Phase A 并行提案 + Phase B 串行归并 ----------
+
+    def propose_node(self, state: GraphState) -> Dict[str, Any]:
+        """Phase A: 对冻结 taxonomy 快照并发出提案, 不改任何状态"""
+        clusters = list(state.get("clusters_list") or [])
+        categories = state.get("categories", {})
+        unchanged = {
+            "tasks": state.get("tasks", deque()),
+            "categories": categories,
+            "clusters_list": [],
+            "current_cluster": None,
+            "residual_clusters": state.get("residual_clusters", []),
+        }
+        if not clusters:
+            return {"proposals": [], **unchanged}
+
+        frozen = [
+            create_category_display_dict(c) for c in categories.values()
+        ]
+        max_workers = int(CONFIG.get("runtime", {}).get("review_concurrency", 16) or 16)
+        print(f"🟣 Phase A 并行提案: {len(clusters)} 簇 × {max_workers} 并发 (快照冻结于 {len(frozen)} 类)")
+
+        def propose(cluster: MicroCluster):
+            try:
+                judge = self.llm_service.analyze_cluster_with_retry(
+                    frozen, create_cluster_display_dict(cluster)
+                )
+                return cluster.id, (cluster, judge)
+            except Exception as exc:
+                # 失败隔离: 单簇失败不再炸全局(串行模式会 raise), 记为 None 由 merge 相收残差
+                print(f"   ⚠️ {cluster.id} 提案失败: {str(exc)[:120]}")
+                return cluster.id, (cluster, None)
+
+        results = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            for cid, pair in pool.map(propose, clusters):
+                results[cid] = pair
+        proposals = [results[c.id] for c in clusters if c.id in results]
+        return {"proposals": proposals, **unchanged}
+
+    def _category_centroid(self, state: GraphState, category_id: str):
+        """类目质心 = 成员 query embedding 均值(全内存, 零新增调用)"""
+        import numpy as np
+        cat = state.get("categories", {}).get(category_id)
+        if not cat or not cat.queries:
+            return None
+        vecs = [q.embedding for q in cat.queries if getattr(q, "embedding", None) is not None]
+        if not vecs:
+            return None
+        arr = np.array(vecs, dtype=float)
+        norm = float(np.linalg.norm(arr.mean(axis=0)))
+        if norm == 0:
+            return None
+        return arr.mean(axis=0) / norm
+
+    def _resolve_create_collision(self, state: GraphState, cluster: MicroCluster, decision: Dict[str, Any]) -> Dict[str, Any]:
+        """create 冲突消解: 提案簇质心 vs 既有类目质心, cosine>0.85 转 merge"""
+        import numpy as np
+        threshold = float(CONFIG.get("runtime", {}).get("create_collision_threshold", 0.85))
+        proposal_vec = None
+        vecs = [q.embedding for q in cluster.queries if getattr(q, "embedding", None) is not None]
+        if vecs:
+            arr = np.array(vecs, dtype=float)
+            norm = float(np.linalg.norm(arr.mean(axis=0)))
+            if norm:
+                proposal_vec = arr.mean(axis=0) / norm
+        if proposal_vec is None:
+            return decision
+        best_id, best_sim = None, 0.0
+        for cat_id in state.get("categories", {}).keys():
+            cat_vec = self._category_centroid(state, cat_id)
+            if cat_vec is None:
+                continue
+            sim = float(np.dot(proposal_vec, cat_vec))
+            if sim > best_sim:
+                best_id, best_sim = cat_id, sim
+        if best_id and best_sim >= threshold:
+            print(f"   🔀 {cluster.id} create 与既有类目 {best_id} 相似度 {best_sim:.3f} → 转 merge")
+            return {
+                "action": "merge",
+                "target_id": best_id,
+                "reason": f"create 冲突消解: 质心相似度 {best_sim:.3f} >= {threshold}",
+            }
+        return decision
+
+    def merge_node(self, state: GraphState) -> Dict[str, Any]:
+        """Phase B: 串行归并提案 — 持有完整当前态的 curator 应用"""
+        proposals = state.get("proposals") or []
+        print(f"🟢 Phase B 串行归并: {len(proposals)} 条提案")
+        for cluster, judge in proposals:
+            if judge is None:
+                record_residual_cluster_tool(state, cluster, "LLM提案失败(并行阶段)")
+                continue
+            action = (judge.get("action") or "").lower()
+            try:
+                if action == "create":
+                    judge = self._resolve_create_collision(state, cluster, judge)
+                    action = judge["action"]
+                self._apply_decision(state, cluster, judge)
+            except Exception as exc:
+                record_residual_cluster_tool(state, cluster, f"提案应用失败: {str(exc)[:120]}")
+        return {
+            "tasks": state.get("tasks", deque()),
+            "categories": state.get("categories", {}),
+            "clusters_list": [],
+            "current_cluster": None,
+            "residual_clusters": state.get("residual_clusters", []),
+            "proposals": [],
+        }
+
+    def _should_continue_two_phase(self, state: GraphState) -> str:
+        tasks = state.get("tasks", deque())
+        if len(tasks) > 0:
+            print(f"   队列还有 {len(tasks)} 个切分任务, 继续循环")
+            return "split_more"
+        print("   队列为空, 结束流程")
+        return "end"
+
+    def _apply_decision(self, state: GraphState, current_cluster: MicroCluster, decision: Dict[str, Any]):
+        """决策应用(串行/两相共用): 原 dispatcher_node 决策体"""
+        action = decision.get("action", "").lower()
+        print(f"   处理 {current_cluster.id}: {action}")
+        if action == "create":
+            create_new_category_tool(state, current_cluster, decision)
+        elif action == "merge":
+            merge_into_existing_category_tool(
+                state,
+                current_cluster,
+                decision["target_id"],
+                decision.get("name_update", "no_update"),
+                decision.get("definition_update", "no_update"),
+                decision.get("boundary_update", "no_update"),
+            )
+        elif action == "split":
+            enqueue_resplit_task_tool(
+                state,
+                current_cluster,
+                decision.get("reason", "semantic_impurity"),
+            )
+        elif action == "inspect":
+            raise ValueError("inspect 应在上层单独处理")
+        else:
+            record_residual_cluster_tool(state, current_cluster, f"未知动作: {action}")
 
     def _should_continue(self, state: GraphState) -> str:
         clusters_to_review = state.get("clusters_list", [])

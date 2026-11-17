@@ -167,3 +167,6 @@ class GraphState(TypedDict):
     total_queries: int
     min_cluster_size: int
     max_split_depth: int
+    proposals: Optional[List]  # 两相评审 Phase A 产出的 (cluster, judge) 列表
+    split_review_budget: Optional[int]
+    split_review_volume: Optional[int]
