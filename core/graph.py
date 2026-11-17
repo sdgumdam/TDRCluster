@@ -45,7 +45,16 @@ class TDRClusterGraph:
             workflow.add_conditional_edges(
                 "merge",
                 self._should_continue_two_phase,
-                {"review_more": "propose", "split_more": "splitter", "end": END},
+                {"review_more": "reviewer", "split_more": "splitter", "end": END},
+            )
+            # 原始 reviewer/dispatcher 节点作为顺延簇的串行处理器(复用, 不重实现)
+            workflow.add_node("reviewer", self.reviewer_node)
+            workflow.add_node("dispatcher", self.dispatcher_node)
+            workflow.add_edge("reviewer", "dispatcher")
+            workflow.add_conditional_edges(
+                "dispatcher",
+                self._should_continue,
+                {"review_more": "reviewer", "split_more": "splitter", "end": END},
             )
             return workflow.compile()
 
@@ -245,37 +254,7 @@ class TDRClusterGraph:
             create_category_display_dict(c) for c in categories.values()
         ]
         max_workers = int(CONFIG.get("runtime", {}).get("review_concurrency", 16) or 16)
-        # 顺延簇(create_deferrals>0 或已有取证轮)走【串行子流程】: 逐簇对照实时树 analyze+立即应用,
-        # 原始串行语义精确恢复(每簇看到前簇应用后的树) — 信息损失为零; 并行只服务首次提案。
-        serial_first = [c for c in clusters if getattr(c, "create_deferrals", 0) > 0 or c.evidence_rounds]
-        parallel_clusters = [c for c in clusters if c not in serial_first]
-        print(f"🟣 Phase A: 并行提案 {len(parallel_clusters)} 簇 × {max_workers} 并发 (快照冻结于 {len(frozen)} 类); 串行子流程 {len(serial_first)} 簇(实时树逐簇)")
-
-        results = {}
-        for cluster in serial_first:
-            # 串行子流程: 每簇现读实时树, 决策立即应用(与原始 reviewer/dispatcher 等价)
-            live = [create_category_display_dict(c) for c in state.get("categories", {}).values()]
-            try:
-                judge = self.llm_service.analyze_cluster_with_retry(
-                    live, create_cluster_display_dict(cluster)
-                )
-            except Exception as exc:
-                print(f"   ⚠️ {cluster.id} 串行提案失败: {str(exc)[:120]}")
-                judge = None
-            action = (judge or {}).get("action", "").lower()
-            try:
-                if action == "inspect":
-                    self._handle_inspect_request(state, cluster, judge.get("reason", "need_more_evidence"))
-                    deferred.append(cluster)
-                    continue
-                if action == "create" and cluster.create_deferrals == 0:
-                    cluster.create_deferrals = 1
-                    deferred.append(cluster)
-                    print(f"   🔀 {cluster.id} create 顺延(再入串行子流程)")
-                    continue
-                self._apply_decision(state, cluster, judge)
-            except Exception as exc:
-                record_residual_cluster_tool(state, cluster, f"串行应用失败: {str(exc)[:120]}")
+        print(f"🟣 Phase A 并行提案: {len(clusters)} 簇 × {max_workers} 并发 (快照冻结于 {len(frozen)} 类)")
 
         def propose(cluster: MicroCluster):
             try:
@@ -288,17 +267,19 @@ class TDRClusterGraph:
                 print(f"   ⚠️ {cluster.id} 提案失败: {str(exc)[:120]}")
                 return cluster.id, (cluster, None)
 
+        results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            for cid, pair in pool.map(propose, parallel_clusters):
+            for cid, pair in pool.map(propose, clusters):
                 results[cid] = pair
-        proposals = [results[c.id] for c in parallel_clusters if c.id in results]
+        proposals = [results[c.id] for c in clusters if c.id in results]
         return {"proposals": proposals, "clusters_list": deferred, **unchanged}
 
     def merge_node(self, state: GraphState) -> Dict[str, Any]:
-        """Phase B: 串行归并提案 — 持有完整当前态的 curator 应用"""
+        """Phase B: 提案逐条流经原始 dispatcher 语义串行应用(无自定义归并逻辑)。
+        create 顺延规则位于共享的 _apply_decision(两条路径同一处)。"""
         proposals = state.get("proposals") or []
-        print(f"🟢 Phase B 串行归并: {len(proposals)} 条提案")
-        deferred_inspect = []
+        print(f"🟢 Phase B 串行归并: {len(proposals)} 条提案(逐条过原始 dispatcher 语义)")
+        remaining = list(state.get("clusters_list") or [])
         for cluster, judge in proposals:
             if judge is None:
                 record_residual_cluster_tool(state, cluster, "LLM提案失败(并行阶段)")
@@ -306,22 +287,14 @@ class TDRClusterGraph:
             action = (judge.get("action") or "").lower()
             try:
                 if action == "inspect":
-                    # superstep 微同步点: inspect 簇追加取证后顺延下一波,
-                    # 重提案时看到的是已合并本波决策的实时树
                     self._handle_inspect_request(state, cluster, judge.get("reason", "need_more_evidence"))
-                    deferred_inspect.append(cluster)
+                    remaining.append(cluster)
                     continue
-                if action == "create" and cluster.create_deferrals == 0:
-                    # create 顺延: 进入下一波的【串行子流程】(逐簇 analyze 实时树+立即 apply),
-                    # 原始语义无损恢复; 串行子流程中再 create 按判定直接应用(其可见性=原始串行)。
-                    cluster.create_deferrals = 1
-                    deferred_inspect.append(cluster)
-                    print(f"   🔀 {cluster.id} create 顺延(下一波串行子流程)")
-                    continue
-                self._apply_decision(state, cluster, judge)
+                applied = self._apply_decision(state, cluster, judge)
+                if applied == "deferred":
+                    remaining.append(cluster)
             except Exception as exc:
                 record_residual_cluster_tool(state, cluster, f"提案应用失败: {str(exc)[:120]}")
-        remaining = list(state.get("clusters_list") or []) + deferred_inspect
         return {
             "tasks": state.get("tasks", deque()),
             "categories": state.get("categories", {}),
@@ -344,9 +317,15 @@ class TDRClusterGraph:
         return "end"
 
     def _apply_decision(self, state: GraphState, current_cluster: MicroCluster, decision: Dict[str, Any]):
-        """决策应用(串行/两相共用): 原 dispatcher_node 决策体"""
+        """决策应用(串行/两相共用): 原 dispatcher_node 决策体。
+        唯一新增规则: create 首次出现顺延(返回 'deferred'), 由调用方回流重提案 —
+        重提案时 LLM 用全量实时分类树+原始判据裁决 merge-or-create。"""
         action = decision.get("action", "").lower()
         print(f"   处理 {current_cluster.id}: {action}")
+        if action == "create" and current_cluster.create_deferrals == 0:
+            current_cluster.create_deferrals = 1
+            print(f"   🔀 {current_cluster.id} create 顺延(实时树重提案)")
+            return "deferred"
         if action == "create":
             create_new_category_tool(state, current_cluster, decision)
         elif action == "merge":
