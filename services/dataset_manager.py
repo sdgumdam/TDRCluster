@@ -169,11 +169,21 @@ class DatasetManager:
         batch_size = 10
         data_for_embedding = progress["data"]
         start_index = progress["next_index"]
+        # 旧进度文件无 row_index 或越界: 只保留 next_index 之前的行并按行序排
+        if data_for_embedding and "row_index" not in data_for_embedding[0]:
+            data_for_embedding = data_for_embedding[:start_index]
+        else:
+            data_for_embedding = sorted(
+                (r for r in data_for_embedding if r.get("row_index", 0) < start_index),
+                key=lambda r: r["row_index"],
+            )
 
         batch_bounds = [(bs, min(bs + batch_size, len(df))) for bs in range(start_index, len(df), batch_size)]
         max_workers = int(self.config.get("embedding", {}).get("max_concurrency", 8) or 8)
         lock = threading.Lock()
         failed_batches: list = []
+        # 并发完成序 != 行序: 按 batch_start 暂存, 由主线程按行序装配, 杜绝错位
+        batch_results: dict = {}
 
         def _embed_batch(batch_range):
             batch_start, batch_end = batch_range
@@ -183,16 +193,28 @@ class DatasetManager:
                 embeddings = embedding_service.get_embeddings(texts)
                 assembled = [
                     {
+                        "row_index": row_index,
                         "query": row["query"],
                         "category": row.get("category", ""),
                         "embedding": embedding,
                     }
-                    for (_, row), embedding in zip(batch_df.iterrows(), embeddings)
+                    for row_index, (_, row), embedding in zip(
+                        range(batch_start, batch_end), batch_df.iterrows(), embeddings
+                    )
                 ]
                 with lock:
-                    data_for_embedding.extend(assembled)
-                    self._save_embedding_progress(dataset_name, batch_end, data_for_embedding)
-                    print(f"   进度: {batch_end}/{len(df)} (批次处理)")
+                    batch_results[batch_start] = assembled
+                    # 进度只推进到从 start_index 起连续成功的位置(失败批次后不前移, 续跑重试)
+                    covered = start_index
+                    for bs, be in batch_bounds:
+                        if bs in batch_results:
+                            covered = be
+                        else:
+                            break
+                    merged = [r for bs, _ in batch_bounds if bs in batch_results for r in batch_results[bs]]
+                    merged.sort(key=lambda r: r["row_index"])
+                    self._save_embedding_progress(dataset_name, covered, merged)
+                    print(f"   进度: {covered}/{len(df)} (批次处理)")
             except Exception as e:
                 with lock:
                     failed_batches.append((batch_start, batch_end, str(e)[:160]))
@@ -200,6 +222,20 @@ class DatasetManager:
 
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             list(pool.map(_embed_batch, batch_bounds))
+
+        # 主线程按行序终装配(只含成功批次)
+        data_for_embedding = [
+            r for bs, _ in batch_bounds if bs in batch_results for r in batch_results[bs]
+        ]
+        data_for_embedding.sort(key=lambda r: r["row_index"])
+        covered = start_index
+        for bs, be in batch_bounds:
+            if bs in batch_results:
+                covered = be
+            else:
+                break
+        if covered > start_index:
+            self._save_embedding_progress(dataset_name, covered, data_for_embedding)
 
         if failed_batches:
             for bs, be, msg in failed_batches[:5]:
