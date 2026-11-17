@@ -44,7 +44,7 @@ class TDRClusterGraph:
             workflow.add_conditional_edges(
                 "merge",
                 self._should_continue_two_phase,
-                {"split_more": "splitter", "end": END},
+                {"review_more": "propose", "split_more": "splitter", "end": END},
             )
             return workflow.compile()
 
@@ -231,6 +231,15 @@ class TDRClusterGraph:
         if not clusters:
             return {"proposals": [], **unchanged}
 
+        # 分小波: 波小则快照新鲜, 盲窗小(跨波吸收保留); 其余簇留待下一波
+        wave_size = int(CONFIG.get("runtime", {}).get("review_wave_size", 32) or 32)
+        if len(clusters) > wave_size:
+            deferred = clusters[wave_size:]
+            clusters = clusters[:wave_size]
+            print(f"   本波评审 {len(clusters)} 簇(波大小上限 {wave_size}), {len(deferred)} 簇顺延")
+        else:
+            deferred = []
+
         frozen = [
             create_category_display_dict(c) for c in categories.values()
         ]
@@ -253,7 +262,7 @@ class TDRClusterGraph:
             for cid, pair in pool.map(propose, clusters):
                 results[cid] = pair
         proposals = [results[c.id] for c in clusters if c.id in results]
-        return {"proposals": proposals, **unchanged}
+        return {"proposals": proposals, "clusters_list": deferred, **unchanged}
 
     def _category_centroid(self, state: GraphState, category_id: str):
         """类目质心 = 成员 query embedding 均值(全内存, 零新增调用)"""
@@ -271,33 +280,75 @@ class TDRClusterGraph:
         return arr.mean(axis=0) / norm
 
     def _resolve_create_collision(self, state: GraphState, cluster: MicroCluster, decision: Dict[str, Any]) -> Dict[str, Any]:
-        """create 冲突消解: 提案簇质心 vs 既有类目质心, cosine>0.85 转 merge"""
+        """create 冲突消解: 几何预筛候选(质心余弦≥0.80), LLM 做吸收裁决(恢复 curator 判据)"""
         import numpy as np
-        threshold = float(CONFIG.get("runtime", {}).get("create_collision_threshold", 0.85))
-        proposal_vec = None
+        prefilter = float(CONFIG.get("runtime", {}).get("create_collision_threshold", 0.80))
         vecs = [q.embedding for q in cluster.queries if getattr(q, "embedding", None) is not None]
-        if vecs:
-            arr = np.array(vecs, dtype=float)
-            norm = float(np.linalg.norm(arr.mean(axis=0)))
-            if norm:
-                proposal_vec = arr.mean(axis=0) / norm
-        if proposal_vec is None:
+        if not vecs:
             return decision
-        best_id, best_sim = None, 0.0
-        for cat_id in state.get("categories", {}).keys():
+        arr = np.array(vecs, dtype=float)
+        norm = float(np.linalg.norm(arr.mean(axis=0)))
+        if not norm:
+            return decision
+        proposal_vec = arr.mean(axis=0) / norm
+
+        candidates = []
+        for cat_id, cat in state.get("categories", {}).items():
             cat_vec = self._category_centroid(state, cat_id)
             if cat_vec is None:
                 continue
             sim = float(np.dot(proposal_vec, cat_vec))
-            if sim > best_sim:
-                best_id, best_sim = cat_id, sim
-        if best_id and best_sim >= threshold:
-            print(f"   🔀 {cluster.id} create 与既有类目 {best_id} 相似度 {best_sim:.3f} → 转 merge")
-            return {
-                "action": "merge",
-                "target_id": best_id,
-                "reason": f"create 冲突消解: 质心相似度 {best_sim:.3f} >= {threshold}",
-            }
+            if sim >= prefilter:
+                candidates.append((cat_id, cat, sim))
+        if not candidates:
+            return decision
+        candidates.sort(key=lambda x: -x[2])
+        top = candidates[:5]
+
+        from core.prompts import create_category_display_dict
+        cat_blocks = "\n".join(
+            f"<candidate id=\"{cid}\" similarity=\"{sim:.3f}\">\n  <name>{cat.name}</name>\n  <definition>{cat.definition}</definition>\n  <boundary_notes>{cat.boundary_notes}</boundary_notes>\n</candidate>"
+            for cid, cat, sim in top
+        )
+        judge_prompt = f"""A micro-cluster proposes creating a new category, but {len(top)} existing categories are geometrically similar (cosine >= {prefilter}). Decide whether the existing taxonomy can absorb this evidence.
+
+<proposed_cluster id="{cluster.id}">
+  <proposed_name>{decision.get('name', '')}</proposed_name>
+  <proposed_definition>{decision.get('definition', '')}</proposed_definition>
+  <samples>{' | '.join(q.content[:120] for q in cluster.queries[:8])}</samples>
+</proposed_cluster>
+<existing_candidates>
+{cat_blocks}
+</existing_candidates>
+
+Return exactly one XML block:
+<decision>
+  <action>merge|create</action>
+  <target_id>CAT-xxx</target_id>
+  <reason>one sentence</reason>
+</decision>
+action=merge means the best candidate absorbs this evidence (fill target_id); action=create means no candidate can absorb without becoming vague."""
+        try:
+            raw = self.llm_service.simple_call(judge_prompt)
+            import re
+            m = re.search(r"<action>(.*?)</action>", raw, re.S)
+            t = re.search(r"<target_id>(.*?)</target_id>", raw, re.S)
+            if m and m.group(1).strip().lower() == "merge" and t:
+                target = t.group(1).strip()
+                if target in state.get("categories", {}):
+                    print(f"   🔀 {cluster.id} create 经 LLM 裁决吸收进 {target}")
+                    return {
+                        "action": "merge",
+                        "target_id": target,
+                        "reason": f"LLM 吸收裁决: 与 {target} 候选组(几何预筛≥{prefilter})",
+                    }
+            print(f"   ✅ {cluster.id} create 经 LLM 裁决确认新建")
+        except Exception as exc:
+            print(f"   ⚠️ 吸收裁决 LLM 失败({str(exc)[:80]}), 退回几何判定")
+            best_id, best_sim = top[0][0], top[0][2]
+            if best_sim >= 0.9:
+                return {"action": "merge", "target_id": best_id,
+                        "reason": f"裁决失败退回几何: 相似度 {best_sim:.3f}"}
         return decision
 
     def merge_node(self, state: GraphState) -> Dict[str, Any]:
@@ -319,13 +370,17 @@ class TDRClusterGraph:
         return {
             "tasks": state.get("tasks", deque()),
             "categories": state.get("categories", {}),
-            "clusters_list": [],
+            "clusters_list": state.get("clusters_list", []),
             "current_cluster": None,
             "residual_clusters": state.get("residual_clusters", []),
             "proposals": [],
         }
 
     def _should_continue_two_phase(self, state: GraphState) -> str:
+        deferred = state.get("clusters_list") or []
+        if deferred:
+            print(f"   还有 {len(deferred)} 簇顺延至下一波, 继续评审")
+            return "review_more"
         tasks = state.get("tasks", deque())
         if len(tasks) > 0:
             print(f"   队列还有 {len(tasks)} 个切分任务, 继续循环")
