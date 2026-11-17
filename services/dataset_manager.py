@@ -32,20 +32,41 @@ class DatasetManager:
 
         self.embedding_service = EmbeddingService()
 
+    def _embedding_model_stamp(self) -> Dict[str, str]:
+        """当前 embedding 模型身份(换模型必须重建缓存, 防止静默混用两个向量空间)"""
+        svc = self.embedding_service
+        return {
+            "api_style": getattr(svc, "api_style", "unknown"),
+            "model_name": str(svc.config.get("model_name", "unknown")),
+        }
+
+    def _check_model_stamp(self, dataset_name: str, stamp_file) -> bool:
+        """缓存存在但模型身份不符 → 视为无缓存(由 generate 重建); True=匹配或无缓存文件"""
+        import json
+        if not stamp_file.exists():
+            return False  # 无戳=未知来源, 一律重建(旧缓存无戳文件兼容期已过)
+        try:
+            stamp = json.loads(stamp_file.read_text(encoding="utf-8"))
+            return stamp == self._embedding_model_stamp()
+        except Exception:
+            return False
+
     def _has_embeddings(self, dataset_name: str) -> bool:
-        """检查数据集是否已有embeddings"""
+        """检查数据集是否已有embeddings(且模型身份匹配)"""
         processed_dir = self.processed_path / dataset_name
+        stamp_file = processed_dir / "embedding_model.json"
 
         # 检查完整备份文件
         backup_file = processed_dir / f"{dataset_name}_complete.pkl"
         if backup_file.exists():
-            return True
+            return self._check_model_stamp(dataset_name, stamp_file)
 
         # 检查分离文件
         metadata_file = processed_dir / f"{dataset_name}_metadata.csv"
         embeddings_file = processed_dir / f"{dataset_name}_embeddings.npz"
 
-        return metadata_file.exists() and embeddings_file.exists()
+        return (metadata_file.exists() and embeddings_file.exists()
+                and self._check_model_stamp(dataset_name, stamp_file))
 
     def _resolve_raw_file(self, dataset_name: str) -> Path:
         for extension in self.SUPPORTED_RAW_EXTENSIONS:
@@ -118,6 +139,10 @@ class DatasetManager:
             # 缓存损坏(pkill 打断写入等): 缓存只能加速, 绝不让 run 崩溃 — 丢弃重建
             print(f"   ⚠️ 进度缓存损坏({exc}), 丢弃重建")
             return {"next_index": 0, "data": []}
+        stamp = progress.get("model")
+        if stamp is not None and stamp != self._embedding_model_stamp():
+            print(f"   ⚠️ 进度缓存来自其他模型({stamp}), 丢弃重建")
+            return {"next_index": 0, "data": []}
 
         next_index = int(progress.get("next_index", 0))
         data = progress.get("data", [])
@@ -129,7 +154,11 @@ class DatasetManager:
         # 原子写(tmp+rename): 进程被杀时绝不留下截断的 pkl(与 viewer/import_to_mongo 同范式)
         tmp_file = progress_file.with_suffix(".pkl.tmp")
         with open(tmp_file, "wb") as file:
-            pickle.dump({"next_index": next_index, "data": data}, file)
+            pickle.dump({
+                "next_index": next_index,
+                "data": data,
+                "model": self._embedding_model_stamp(),
+            }, file)
             file.flush()
             os.fsync(file.fileno())
         os.replace(tmp_file, progress_file)

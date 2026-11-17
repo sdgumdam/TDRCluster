@@ -206,6 +206,15 @@ class EmbeddingService:
         with open(backup_path, 'wb') as f:
             pickle.dump(data, f)
         
+        # 写模型身份戳(原子): 换模型时缓存自动失效, 杜绝静默混用两个向量空间
+        import json as _json
+        import os as _os
+        stamp_tmp = base_path / "embedding_model.json.tmp"
+        stamp_tmp.write_text(_json.dumps({
+            "api_style": self.api_style,
+            "model_name": str(self.config.get("model_name", "unknown")),
+        }, ensure_ascii=False), encoding="utf-8")
+        _os.replace(stamp_tmp, base_path / "embedding_model.json")
         print(f"✓ Embeddings已保存 ({len(data)} 条记录)")
         return str(base_path)
     
