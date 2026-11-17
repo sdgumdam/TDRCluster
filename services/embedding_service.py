@@ -85,11 +85,24 @@ class EmbeddingService:
                     normalize_embeddings=True, show_progress_bar=False)
                 return [v.tolist() for v in vecs]
             if self.api_style == 'openai':
-                response = self.client.embeddings.create(
-                    input=cleaned_texts,
-                    model=self.config.get('model_name')
-                )
-                return [item.embedding for item in response.data]
+                # 429/5xx 退避重试: 配额墙是减速信号而非失败信号(持续高并发必撞TPM)
+                import time
+                max_attempts = 6
+                for attempt in range(max_attempts):
+                    try:
+                        response = self.client.embeddings.create(
+                            input=cleaned_texts,
+                            model=self.config.get('model_name')
+                        )
+                        return [item.embedding for item in response.data]
+                    except Exception as request_error:
+                        error_text = str(request_error)
+                        retriable = ('429' in error_text) or ('5' in error_text.split(' ')[0:1][0][-3:] if 'Error code' in error_text else False)
+                        if not retriable or attempt == max_attempts - 1:
+                            raise
+                        backoff = min(15 * (attempt + 1), 60)
+                        print(f"   ⏳ embedding 限流, {backoff}s 后重试({attempt+1}/{max_attempts}): {error_text[:100]}")
+                        time.sleep(backoff)
 
             if self.api_style == 'ark_multimodal':
                 return self._get_ark_multimodal_embeddings(cleaned_texts)

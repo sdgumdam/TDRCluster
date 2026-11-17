@@ -1,6 +1,7 @@
 """
 数据集管理器
 """
+import os
 import pickle
 import pandas as pd
 import threading
@@ -110,8 +111,13 @@ class DatasetManager:
         if not progress_file.exists():
             return {"next_index": 0, "data": []}
 
-        with open(progress_file, "rb") as file:
-            progress = pickle.load(file)
+        try:
+            with open(progress_file, "rb") as file:
+                progress = pickle.load(file)
+        except Exception as exc:
+            # 缓存损坏(pkill 打断写入等): 缓存只能加速, 绝不让 run 崩溃 — 丢弃重建
+            print(f"   ⚠️ 进度缓存损坏({exc}), 丢弃重建")
+            return {"next_index": 0, "data": []}
 
         next_index = int(progress.get("next_index", 0))
         data = progress.get("data", [])
@@ -120,8 +126,13 @@ class DatasetManager:
 
     def _save_embedding_progress(self, dataset_name: str, next_index: int, data: List[Dict[str, Any]]):
         progress_file = self._progress_file(dataset_name)
-        with open(progress_file, "wb") as file:
+        # 原子写(tmp+rename): 进程被杀时绝不留下截断的 pkl(与 viewer/import_to_mongo 同范式)
+        tmp_file = progress_file.with_suffix(".pkl.tmp")
+        with open(tmp_file, "wb") as file:
             pickle.dump({"next_index": next_index, "data": data}, file)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(tmp_file, progress_file)
 
     def _clear_embedding_progress(self, dataset_name: str):
         progress_file = self._progress_file(dataset_name)
