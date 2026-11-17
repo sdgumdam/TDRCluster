@@ -112,7 +112,7 @@ def save_results(final_state: dict, output_dir: str, dataset_name: str) -> tuple
                     })
             if docs:
                 col.insert_many(docs, ordered=False)
-                print(f"   ✓ Mongo 落账: ai_agent.large_intent_cluster {len(docs)} 行 (version={version})")
+                print(f"   ✓ Mongo 落账: ai_agent.{collection_name} {len(docs)} 行 (version={version})")
         except Exception as exc:
             print(f"   ⚠️ Mongo 落账失败: {exc}")
 
