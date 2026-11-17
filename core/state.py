@@ -60,7 +60,6 @@ class MicroCluster(BaseModel):
     inspect_round: int = 0
     inspect_reasons: List[str] = Field(default_factory=list)
     allow_inspect: bool = True
-    create_deferrals: int = 0  # create 顺延次数(0=未顺延; 1=已重提案过, 再 create 直接应用)
     inspect_stop_reason: Optional[str] = None
     is_noise: bool = False
     judge: Optional[Dict[str, Any]] = None
@@ -168,6 +167,6 @@ class GraphState(TypedDict):
     total_queries: int
     min_cluster_size: int
     max_split_depth: int
-    proposals: Optional[List]  # 两相评审 Phase A 产出的 (cluster, judge) 列表
+    analyses: Optional[List]  # two_phase 并行内容分析产出的 (cluster, analysis) 列表
     split_review_budget: Optional[int]
     split_review_volume: Optional[int]

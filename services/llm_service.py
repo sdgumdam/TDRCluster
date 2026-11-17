@@ -66,30 +66,23 @@ class LLMService:
             print(f"❌ LLM调用失败: {str(e)}")
             raise
 
-    def analyze_cluster_with_retry(
+    def _decide_with_retry(
         self,
-        finalized_categories: List[Dict[str, Any]],
-        cluster_to_review: Dict[str, Any],
+        prompt: str,
+        system_prompt: str,
+        cluster_ids: List[str],
+        existing_categories: Dict[str, Any],
+        allow_inspect: bool,
         max_retries: int = 3,
+        log_label: str = "LLM reviewer",
     ) -> Dict[str, Any]:
-        """评审单个micro-cluster，并返回唯一决策"""
-        from core.prompts import create_review_prompt, create_reviewer_system_prompt
-
-        prompt = create_review_prompt(finalized_categories, cluster_to_review)
-        from config.config_loader import CONFIG
-        system_prompt = create_reviewer_system_prompt(
-            CONFIG.get("runtime", {}).get("taxonomy_kind", "intent")
-        )
-        existing_categories = {cat["id"]: cat for cat in finalized_categories}
-        cluster_ids = [cluster_to_review["id"]]
-        allow_inspect = bool(cluster_to_review.get("allow_inspect", True))
-
+        """共享重试+XML校验循环: 单簇决策调用(serial reviewer 与 two_phase 仲裁共用)"""
         last_result = {"valid": False, "error_message": "unknown"}
         for attempt in range(max_retries + 1):
             if attempt == 0:
-                print("🔍 调用LLM reviewer...")
+                print(f"🔍 调用{log_label}...")
             else:
-                print(f"🔄 LLM reviewer重试 {attempt}/{max_retries} ...")
+                print(f"🔄 {log_label}重试 {attempt}/{max_retries} ...")
 
             try:
                 response = self.simple_call(prompt, system_message=system_prompt)
@@ -108,7 +101,7 @@ class LLMService:
                 last_result = validation_result
 
             except Exception as e:
-                print(f"❌ LLM reviewer调用失败: {str(e)}")
+                print(f"❌ {log_label}调用失败: {str(e)}")
                 last_result = {"valid": False, "error_message": str(e)}
         else:
             raise RuntimeError(f"LLM响应验证连续失败，最后错误: {last_result['error_message']}")
@@ -120,6 +113,30 @@ class LLMService:
             )
 
         return decisions[0]
+
+    def analyze_cluster_with_retry(
+        self,
+        finalized_categories: List[Dict[str, Any]],
+        cluster_to_review: Dict[str, Any],
+        max_retries: int = 3,
+    ) -> Dict[str, Any]:
+        """评审单个micro-cluster，并返回唯一决策(serial路径)"""
+        from core.prompts import create_review_prompt, create_reviewer_system_prompt
+        from config.config_loader import CONFIG
+
+        prompt = create_review_prompt(finalized_categories, cluster_to_review)
+        system_prompt = create_reviewer_system_prompt(
+            CONFIG.get("runtime", {}).get("taxonomy_kind", "intent")
+        )
+        return self._decide_with_retry(
+            prompt,
+            system_prompt,
+            [cluster_to_review["id"]],
+            {cat["id"]: cat for cat in finalized_categories},
+            allow_inspect=bool(cluster_to_review.get("allow_inspect", True)),
+            max_retries=max_retries,
+            log_label="LLM reviewer",
+        )
 
     def _validate_xml_response(
         self,
@@ -276,3 +293,87 @@ class LLMService:
             result["error_message"] = f"未知错误: {str(e)}"
 
         return result
+
+    def analyze_cluster_content(
+        self,
+        cluster_to_review: Dict[str, Any],
+        max_retries: int = 3,
+    ) -> Dict[str, Any]:
+        """two_phase Phase A: 单簇孤立内容分析(无分类树输入), 返回分析字典"""
+        from core.prompts import (
+            create_content_analysis_prompt,
+            create_content_analysis_system_prompt,
+        )
+
+        prompt = create_content_analysis_prompt(cluster_to_review)
+        system_prompt = create_content_analysis_system_prompt()
+
+        last_error = "unknown"
+        for attempt in range(max_retries + 1):
+            if attempt == 0:
+                print(f"🔍 内容分析 {cluster_to_review.get('id')} ...")
+            else:
+                print(f"🔄 内容分析重试 {attempt}/{max_retries} ({cluster_to_review.get('id')}) ...")
+            try:
+                response = self.simple_call(prompt, system_message=system_prompt)
+                analysis = self._parse_analysis_response(response)
+                print(f"✅ 内容分析通过 ({cluster_to_review.get('id')}) purity={analysis.get('purity')}")
+                return analysis
+            except Exception as e:
+                print(f"❌ 内容分析失败: {str(e)[:120]}")
+                last_error = str(e)
+        raise RuntimeError(f"内容分析连续失败: {last_error}")
+
+    def _parse_analysis_response(self, xml_response: str) -> Dict[str, Any]:
+        """解析并校验 <analysis> XML 响应"""
+        text = xml_response.strip()
+        start = text.find("<analysis>")
+        end = text.find("</analysis>")
+        if start == -1 or end == -1 or end < start:
+            raise ValueError("未找到<analysis>标签")
+        xml_text = re.sub(r"&(?!(?:amp|lt|gt|quot|apos);)", "&amp;", text[start:end + len("</analysis>")])
+        root = ET.fromstring(xml_text)
+        if root.tag != "analysis":
+            raise ValueError(f"根标签应为<analysis>，实际为<{root.tag}>")
+
+        def _field(name: str) -> str:
+            elem = root.find(name)
+            return (elem.text or "").strip() if elem is not None else ""
+
+        analysis = {
+            "summary": _field("summary"),
+            "candidate_label": _field("candidate_label"),
+            "candidate_definition": _field("candidate_definition"),
+            "purity": _field("purity").lower(),
+            "split_reason": _field("split_reason"),
+        }
+        if analysis["purity"] not in ("pure", "impure"):
+            raise ValueError(f"purity 必须为 pure|impure，实际: {analysis['purity']!r}")
+        if not analysis["summary"] or not analysis["candidate_label"]:
+            raise ValueError("summary/candidate_label 不能为空")
+        return analysis
+
+    def arbitrate_with_tree(
+        self,
+        finalized_categories: List[Dict[str, Any]],
+        cluster_to_review: Dict[str, Any],
+        analysis: Dict[str, Any],
+        max_retries: int = 3,
+    ) -> Dict[str, Any]:
+        """two_phase Phase B: 串行仲裁(全量实时树), 决策空间与 serial 同构(create|merge|split|inspect)"""
+        from core.prompts import create_arbitration_prompt, create_arbitration_system_prompt
+
+        print(f"⚖️ 仲裁 {cluster_to_review.get('id')} (实时树 {len(finalized_categories)} 类) ...")
+        decision = self._decide_with_retry(
+            create_arbitration_prompt(finalized_categories, cluster_to_review, analysis),
+            create_arbitration_system_prompt(),
+            [cluster_to_review["id"]],
+            {cat["id"]: cat for cat in finalized_categories},
+            allow_inspect=bool(cluster_to_review.get("allow_inspect", True)),
+            max_retries=max_retries,
+            log_label="仲裁",
+        )
+        action = (decision.get("action") or "").lower()
+        if action not in ("create", "merge", "split", "inspect"):
+            raise RuntimeError(f"仲裁只允许 create|merge|split|inspect，实际: {action}")
+        return decision

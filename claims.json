@@ -1,0 +1,46 @@
+[
+  {
+    "package": "core/prompts.py",
+    "claim": "评审 prompt 与决策词汇未变：create/merge/split/inspect 与 XML 输出契约原样保留；capability 变体仅在 runtime.taxonomy_kind=capability 参数下启用，intent 默认文本与上游一致",
+    "cards": [
+      {
+        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
+        "question": "claim1: 评审 prompt 与决策词汇未变(create/merge/split/inspect 与 XML 契约原样保留)",
+        "answer": "确认"
+      }
+    ]
+  },
+  {
+    "package": "core/graph.py",
+    "claim": "merge_node 仍是持有完整当前态的串行 curator：按序应用提案、categories 随每条提案更新，不是并行归并",
+    "cards": [
+      {
+        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
+        "question": "claim2: merge 相仍是持有完整当前态的串行 curator",
+        "answer": "确认"
+      }
+    ]
+  },
+  {
+    "package": "core/graph.py",
+    "claim": "serial 评审路径完整保留：runtime.review_mode 默认 serial，原 reviewer/dispatcher 图装配与 _should_continue 不变，可回滚可 A/B",
+    "cards": [
+      {
+        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
+        "question": "claim5: serial 路径完整保留可回滚",
+        "answer": "确认"
+      }
+    ]
+  },
+  {
+    "package": "files:services/dataset_manager.py,services/embedding_service.py",
+    "claim": "并行 embedding 按行序终装配+连续前缀进度语义；进度与最终缓存原子写(tmp+fsync+rename)并携带 api_style+model_name 身份戳，换模型自动失效重建",
+    "cards": [
+      {
+        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
+        "question": "claim6: 失败隔离+缓存健壮性为行为改进(dataset_manager 并行 embedding 的行序/原子写/戳)",
+        "answer": "确认"
+      }
+    ]
+  }
+]
