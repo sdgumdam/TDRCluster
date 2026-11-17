@@ -94,7 +94,9 @@ def save_results(final_state: dict, output_dir: str, dataset_name: str) -> tuple
         try:
             from pymongo import MongoClient
             client = MongoClient(mongo_uri, serverSelectionTimeoutMS=8000)
-            col = client["ai_agent"]["large_intent_cluster"]
+            taxonomy_kind = config.get("runtime", {}).get("taxonomy_kind", "intent")
+            collection_name = "large_capability_cluster" if taxonomy_kind == "capability" else "large_intent_cluster"
+            col = client["ai_agent"][collection_name]
             version = os.environ.get("CLUSTER_VERSION", timestamp)
             docs = []
             for category in categories.values():

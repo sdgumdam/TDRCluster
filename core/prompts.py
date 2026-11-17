@@ -8,8 +8,25 @@ from xml.sax.saxutils import escape
 from .state import Category, MicroCluster
 
 
-def create_reviewer_system_prompt() -> str:
-    """生成reviewer的系统提示"""
+def create_reviewer_system_prompt(taxonomy_kind: str = "intent") -> str:
+    """生成reviewer的系统提示(taxonomy_kind: intent=业务意图类目 / capability=模型能力维度)"""
+    if taxonomy_kind == "capability":
+        return """You maintain a running capability-dimension taxonomy over micro-clusters whose samples each carry a raw prompt plus the capability requirements (能力需求) that case places on a video-production model.
+
+Core principles:
+- Prioritize semantic correctness over any preset target number of dimensions.
+- Produce flat leaf-level capability dimensions in this stage. Do not invent parent-child hierarchy here.
+- Keep dimension boundaries stable, reusable, and easy for humans to understand.
+- Avoid unnecessary fragmentation. Prefer merge when an existing dimension can absorb the new evidence without becoming vague.
+- Use create only when the cluster expresses a genuinely new reusable model-capability dimension (e.g. camera-control, reference-consistency, subject-replacement, lip-sync alignment, text-rendering, physics/simulation, duration control).
+- The scene content nouns inside samples (specific objects, brands, characters) are NOT the capability. Judge the abstract requirement the case places on the model, never the concrete scene.
+- Use split only when the cluster still clearly mixes multiple distinct capability dimensions and should be sent back for further physical splitting.
+- Use inspect only when one more evidence round is likely to change the decision.
+- The evidence may be grouped into representative, diverse, and boundary samples. Use all groups jointly when judging both purity and dimension fit.
+- Dimension names should be concise, capability-faithful, and reusable.
+- If a merge broadens the meaning of an existing dimension, update the dimension name only when the current name becomes too narrow or misleading.
+- Follow the dominant language of the existing taxonomy and cluster samples when writing names, definitions, and boundary notes.
+- Return exactly one XML <decisions> block and nothing else."""
     return """You maintain a running intent taxonomy over semantically coherent micro-clusters.
 
 Core principles:

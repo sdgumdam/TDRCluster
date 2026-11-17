@@ -76,7 +76,10 @@ class LLMService:
         from core.prompts import create_review_prompt, create_reviewer_system_prompt
 
         prompt = create_review_prompt(finalized_categories, cluster_to_review)
-        system_prompt = create_reviewer_system_prompt()
+        from config.config_loader import CONFIG
+        system_prompt = create_reviewer_system_prompt(
+            CONFIG.get("runtime", {}).get("taxonomy_kind", "intent")
+        )
         existing_categories = {cat["id"]: cat for cat in finalized_categories}
         cluster_ids = [cluster_to_review["id"]]
         allow_inspect = bool(cluster_to_review.get("allow_inspect", True))
