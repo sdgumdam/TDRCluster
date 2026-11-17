@@ -216,13 +216,16 @@ class DatasetManager:
             return {"next_index": 0, "data": []}
 
     def _save_embedding_progress(self, dataset_name: str, next_index: int, data: List[Dict[str, Any]]):
-        """追加式: 只把未持久化的记录块追加进 append 文件(O(每批)), meta(json小文件)原子重写"""
+        """追加式: 把行号落在 [persisted, next_index) 的未持久化记录追加进 append 文件;
+        按行号筛选(非列表位置) — 续跑时 data 只含本 run 行, 位置与行号错位"""
         persisted = self._persisted_upto.get(dataset_name, 0)
         if next_index > persisted:
-            with open(self._append_file(dataset_name), "ab") as file:
-                pickle.dump(data[persisted:next_index], file, protocol=4)
-                file.flush()
-                os.fsync(file.fileno())
+            chunk = [r for r in data if persisted <= r.get("row_index", 0) < next_index]
+            if chunk:
+                with open(self._append_file(dataset_name), "ab") as file:
+                    pickle.dump(chunk, file, protocol=4)
+                    file.flush()
+                    os.fsync(file.fileno())
             self._persisted_upto[dataset_name] = next_index
         meta_file = self._progress_meta_file(dataset_name)
         tmp_file = meta_file.with_suffix(".json.tmp")
@@ -337,8 +340,11 @@ class DatasetManager:
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             list(pool.map(_embed_batch, batch_bounds))
 
-        # 主线程按行序终装配(只含成功批次)
-        data_for_embedding = [
+        # 主线程按行序终装配: 续跑前缀 + 本 run 成功批次(缺前缀会把断点续跑判成低成功率)
+        resume_prefix = [
+            r for r in data_for_embedding if r.get("row_index", 0) < start_index
+        ]
+        data_for_embedding = resume_prefix + [
             r for bs, _ in batch_bounds if bs in batch_results for r in batch_results[bs]
         ]
         data_for_embedding.sort(key=lambda r: r["row_index"])
