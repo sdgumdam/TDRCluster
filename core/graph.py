@@ -265,95 +265,6 @@ class TDRClusterGraph:
         proposals = [results[c.id] for c in clusters if c.id in results]
         return {"proposals": proposals, "clusters_list": deferred, **unchanged}
 
-    def _category_centroid(self, state: GraphState, category_id: str):
-        """类目质心 = 成员 query embedding 均值(全内存, 零新增调用)"""
-        import numpy as np
-        cat = state.get("categories", {}).get(category_id)
-        if not cat or not cat.queries:
-            return None
-        vecs = [q.embedding for q in cat.queries if getattr(q, "embedding", None) is not None]
-        if not vecs:
-            return None
-        arr = np.array(vecs, dtype=float)
-        norm = float(np.linalg.norm(arr.mean(axis=0)))
-        if norm == 0:
-            return None
-        return arr.mean(axis=0) / norm
-
-    def _resolve_create_collision(self, state: GraphState, cluster: MicroCluster, decision: Dict[str, Any]) -> Dict[str, Any]:
-        """create 冲突消解: 几何预筛候选(质心余弦≥0.80), LLM 做吸收裁决(恢复 curator 判据)"""
-        import numpy as np
-        prefilter = float(CONFIG.get("runtime", {}).get("create_collision_threshold", 0.80))
-        vecs = [q.embedding for q in cluster.queries if getattr(q, "embedding", None) is not None]
-        if not vecs:
-            return decision
-        arr = np.array(vecs, dtype=float)
-        norm = float(np.linalg.norm(arr.mean(axis=0)))
-        if not norm:
-            return decision
-        proposal_vec = arr.mean(axis=0) / norm
-
-        candidates = []
-        for cat_id, cat in state.get("categories", {}).items():
-            cat_vec = self._category_centroid(state, cat_id)
-            if cat_vec is None:
-                continue
-            sim = float(np.dot(proposal_vec, cat_vec))
-            if sim >= prefilter:
-                candidates.append((cat_id, cat, sim))
-        if not candidates:
-            return decision
-        candidates.sort(key=lambda x: -x[2])
-        top = candidates[:5]
-
-        from core.prompts import create_category_display_dict
-        cat_blocks = "\n".join(
-            f"<candidate id=\"{cid}\" similarity=\"{sim:.3f}\">\n  <name>{cat.name}</name>\n  <definition>{cat.definition}</definition>\n  <boundary_notes>{cat.boundary_notes}</boundary_notes>\n</candidate>"
-            for cid, cat, sim in top
-        )
-        judge_prompt = f"""A micro-cluster proposes creating a new category, but {len(top)} existing categories are geometrically similar (cosine >= {prefilter}). Decide whether the existing taxonomy can absorb this evidence.
-
-<proposed_cluster id="{cluster.id}">
-  <proposed_name>{decision.get('name', '')}</proposed_name>
-  <proposed_definition>{decision.get('definition', '')}</proposed_definition>
-  <samples>{' | '.join(q.content[:120] for q in cluster.queries[:8])}</samples>
-</proposed_cluster>
-<existing_candidates>
-{cat_blocks}
-</existing_candidates>
-
-Return exactly one XML block:
-<decision>
-  <action>merge|create</action>
-  <target_id>CAT-xxx</target_id>
-  <reason>one sentence</reason>
-</decision>
-action=merge means the best candidate absorbs this evidence (fill target_id); action=create means no candidate can absorb without becoming vague."""
-        try:
-            raw = self.llm_service.simple_call(judge_prompt)
-            import re
-            m = re.search(r"<action>(.*?)</action>", raw, re.S)
-            t = re.search(r"<target_id>(.*?)</target_id>", raw, re.S)
-            if m and m.group(1).strip().lower() == "merge" and t:
-                target = t.group(1).strip()
-                if target in state.get("categories", {}):
-                    print(f"   🔀 {cluster.id} create 经 LLM 裁决吸收进 {target}")
-                    return {
-                        "action": "merge",
-                        "target_id": target,
-                        "reason": f"LLM 吸收裁决: 与 {target} 候选组(几何预筛≥{prefilter})",
-                    }
-            print(f"   ✅ {cluster.id} create 经 LLM 裁决确认新建")
-        except Exception as exc:
-            # 原设计无几何 fallback: 错误 merge 会毒化分类树(难撤销),
-            # 裁决失败 → 残差(可见可复查), 绝不静默自动 merge
-            print(f"   ⚠️ 吸收裁决 LLM 失败({str(exc)[:80]}), 记残待查")
-            return {
-                "action": "residual",
-                "reason": f"吸收裁决失败: {str(exc)[:100]}",
-            }
-        return decision
-
     def merge_node(self, state: GraphState) -> Dict[str, Any]:
         """Phase B: 串行归并提案 — 持有完整当前态的 curator 应用"""
         proposals = state.get("proposals") or []
@@ -372,8 +283,14 @@ action=merge means the best candidate absorbs this evidence (fill target_id); ac
                     deferred_inspect.append(cluster)
                     continue
                 if action == "create":
-                    judge = self._resolve_create_collision(state, cluster, judge)
-                    action = judge["action"]
+                    # create 一律顺延一波(唯一新增规则): 下一波以原始全上下文 prompt
+                    # 对实时树重提案, TDR 自己的判据裁决 merge-or-create。
+                    # 无检测/无阈值/无质心/无候选组; 重提案后再 create 按判定直接应用(终止规则)。
+                    if getattr(cluster, "create_deferrals", 0) == 0:
+                        cluster.create_deferrals = 1
+                        deferred_inspect.append(cluster)
+                        print(f"   🔀 {cluster.id} create 顺延下一波(实时树重提案)")
+                        continue
                 self._apply_decision(state, cluster, judge)
             except Exception as exc:
                 record_residual_cluster_tool(state, cluster, f"提案应用失败: {str(exc)[:120]}")

@@ -60,6 +60,7 @@ class MicroCluster(BaseModel):
     inspect_round: int = 0
     inspect_reasons: List[str] = Field(default_factory=list)
     allow_inspect: bool = True
+    create_deferrals: int = 0  # create 顺延次数(0=未顺延; 1=已重提案过, 再 create 直接应用)
     inspect_stop_reason: Optional[str] = None
     is_noise: bool = False
     judge: Optional[Dict[str, Any]] = None
