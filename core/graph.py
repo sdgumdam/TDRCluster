@@ -441,9 +441,10 @@ class SplitPrefetcher:
 
     _CLUSTERING_LOCK = __import__("threading").Lock()
 
-    def __init__(self, clustering_service):
+    def __init__(self, clustering_service, workers: int = 1):
         from concurrent.futures import ThreadPoolExecutor
 
+        del workers  # 单worker定死: 锁的存在就是为串行化; 形参保留兼容基类 __init__ 的调用
         self._svc = clustering_service
         self._pool = ThreadPoolExecutor(max_workers=1)
         self._futures: dict = {}
@@ -475,12 +476,10 @@ class SplitPrefetcher:
 
 
 class PrefetchTDRClusterGraph(TDRClusterGraph):
-    """two_phase 专用: 基类 TDRClusterGraph 字节不动, 预取钩子全部在子类。
-    review_mode != two_phase 时 main.py 必须实例化基类(走原类原路径)。"""
-
-    def __init__(self, llm_service):
-        super().__init__(llm_service)
-        self.split_prefetch = SplitPrefetcher(self.clustering_service)
+    """two_phase 专用子类: 基类(d8af199)已含预取实例化与 _apply_decision/run 的 submit 钩子,
+    子类只补基类缺失的两件——splitter 的 take/direct 消费钩子与运行结束 shutdown;
+    本文件同名 SplitPrefetcher(锁版)在基类定义之后, 实例化时解析为锁版, 基类字节不动。
+    review_mode != two_phase 时 main.py 必须实例化基类(基类不建预取器, 走原路径)。"""
 
     def splitter_node(self, state: GraphState) -> Dict[str, Any]:
         """覆写仅在有任务待切时生效; 返回块与基类尾部同构(基类无此缝可复用)。"""
@@ -505,15 +504,9 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
             "residual_clusters": all_residual_clusters,
         }
 
-    def _apply_decision(self, state: GraphState, current_cluster, decision):
-        super()._apply_decision(state, current_cluster, decision)
-        if decision.get("action", "").lower() == "split":
-            tasks = state.get("tasks", deque())
-            # 父锚校验: 队尾任务的 parent 即当前簇才提交预取, 防误吞同尾任务
-            if tasks and tasks[-1].parent_cluster_id == current_cluster.id:
-                self.split_prefetch.submit(tasks[-1], state["total_queries"])
-
     def run(self, initial_queries: List[Query]) -> Dict[str, Any]:
         final_state = super().run(initial_queries)
-        self.split_prefetch.shutdown()
+        if self.split_prefetch is not None:
+            self.split_prefetch.shutdown()
         return final_state
+

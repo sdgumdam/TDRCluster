@@ -1,11 +1,11 @@
 [
   {
     "package": "core/graph.py,main.py,evidence/graph_vs_d8af199.diff,evidence/main_tree_process_state.txt",
-    "claim": "要求1 代码路径独立：基类 TDRClusterGraph 相对基线启动commit d8af199 零删改(evidence/graph_vs_d8af199.diff 全文为证)；预取钩子全部在文件尾追加的子类；main.py 在 review_mode!=two_phase 时实例化基类。过程事实以 git 输出工件为证(evidence/main_tree_process_state.txt)：主仓 HEAD=d8af199、工作树净(status 空)、未提交改动在 stash、基线进程 10:19:59 启动、双 worktree 隔离",
+    "claim": "要求1 代码路径独立(用户原话'最最最重要 代码路径独立')：serial 基线所跑代码路径不被本分支改动——①core/graph.py 基类相对基线commit d8af199 零删改(evidence/graph_vs_d8af199.diff) ②review_mode=serial 时实例化原类原方法(main.py 选类) ③主树工作树冻结(evidence/main_tree_process_state.txt: HEAD=d8af199/status净/改动在stash)。实现细节(基类自带submit钩子/锁版同名类后置覆盖/子类补take钩子)由机器判,不属于本卡确认范围",
     "cards": [
       {
-        "sha256": "fa2d7a1134aed51ad755b4da590b450e6605d546976266799cb02abcb4739a35",
-        "question": "要求1 终稿（git 工件替代人证）：是否如实转述？",
+        "sha256": "0cb94d5ecd31d80ccd76bfe6d4c5a2ac0078a085dd9263b42d390088502991f1",
+        "question": "要求1 = “serial 基线代码路径不被分支改动”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
