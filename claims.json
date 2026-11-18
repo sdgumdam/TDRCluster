@@ -1,11 +1,11 @@
 [
   {
     "package": "core/tools.py,evidence/ck_log_smoke.txt",
-    "claim": "要求6 类目文本原文落日志：create 时打印 definition/boundary 原文、merge 时打印 name/definition/boundary 更新原文(各一行 [CK原文] 前缀)，纯 print 追加，不改变任何状态写入逻辑(直调冒烟已验: 5行全落+状态断言过, 冒烟先于本门执行已如实申报)；此后任何 run 的日志可无损重放, 重放脚本的 regen 替代仅适用于历史日志",
+    "claim": "要求6 类目文本原文落日志：core/tools.py 在 create 时打印 definition/boundary 原文、merge 时打印 name/definition/boundary 更新原文([CK原文]前缀各一行)——5 个 print 追加(diff 共+6行, 含1空行)，不改变任何状态写入逻辑(diff 为证)；直调冒烟工件(evidence/ck_log_smoke.txt, 空簇夹具)实证 5 行落日志且状态断言通过。范围边界: inspect 的真实 reason 不在本 claim 覆盖内(仍不落日志)",
     "cards": [
       {
-        "sha256": "5b1d9401f8b54ce3a71a7772a55d147d0a4c9e331fef3bcd8cae88c133ec7310",
-        "question": "要求6（类目文本原文落日志）：是否如实转述你的要求？",
+        "sha256": "e8b840606999718bdb38f314a1f56d1da19ce48536f3ca432bc7f9e5631d3445",
+        "question": "要求6 = “日志补上缺失的类目文本原文，今后 run 可无损重放”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
