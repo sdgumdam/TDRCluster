@@ -5,7 +5,6 @@ LangGraph流程编排模块
 import re
 from typing import List, Dict, Any, Tuple
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor
 
 from langgraph.graph import StateGraph, END
 
@@ -22,33 +21,58 @@ from .prompts import create_cluster_display_dict, create_category_display_dict
 from services.clustering_service import ClusteringService
 
 
+class SplitPrefetcher:
+    """后台物理切分预取器: perform_clustering 是纯函数(只依赖任务query+种子, 不见分类树),
+    子簇结果与运行时现算逐位相同 — LLM 决策路径零改变, 仅把 UMAP/HDBSCAN 算进评审等待期"""
+
+    def __init__(self, clustering_service, workers: int):
+        from concurrent.futures import ThreadPoolExecutor
+        self._svc = clustering_service
+        self._pool = ThreadPoolExecutor(max_workers=workers)
+        self._futures: dict = {}
+
+    def submit(self, task, total_queries: int):
+        if task.id in self._futures:
+            return
+        print(f"⚡ 预取切分 {task.id}: {len(task.queries)} 例 depth={task.depth}")
+        self._futures[task.id] = self._pool.submit(
+            self._svc.perform_clustering, task, total_queries
+        )
+
+    def take(self, task_id: str):
+        fut = self._futures.pop(task_id, None)
+        if fut is None:
+            return None
+        result = fut.result()
+        print(f"⚡ 预取命中 {task_id}")
+        return result
+
+    def shutdown(self):
+        self._pool.shutdown(wait=False, cancel_futures=True)
+
+
 class TDRClusterGraph:
     """TDRCluster V2主工作流"""
 
     def __init__(self, llm_service):
         self.llm_service = llm_service
         self.clustering_service = ClusteringService()
+        self.split_prefetch = (
+            SplitPrefetcher(
+                self.clustering_service,
+                int(CONFIG.get("runtime", {}).get("split_prefetch_workers", 3) or 3),
+            )
+            if CONFIG.get("runtime", {}).get("review_mode", "serial") == "two_phase"
+            else None
+        )
         self.inspect_config = CONFIG.get("clustering", {}).get("inspect", {})
         self.graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
         workflow = StateGraph(GraphState)
 
-        if CONFIG.get("runtime", {}).get("review_mode", "serial") == "two_phase":
-            # 无信息损失并发: 并行簇内自足分析(split门,无树) + 纯簇走原生serial reviewer(全量实时树)
-            workflow.add_node("splitter", self.splitter_node)
-            workflow.add_node("analyze", self.analyze_node)
-            workflow.add_node("resolve", self.resolve_node)
-
-            workflow.set_entry_point("splitter")
-            workflow.add_edge("splitter", "analyze")
-            workflow.add_edge("analyze", "resolve")
-            workflow.add_conditional_edges(
-                "resolve",
-                self._should_continue_v2,
-                {"analyze_more": "analyze", "split_more": "splitter", "end": END},
-            )
-            return workflow.compile()
+        # 拓扑统一为 serial(splitter→reviewer→dispatcher): 所有决策原语均树耦合(实测),
+        # two_phase 仅在 __init__ 里额外开启后台物理切分预取(SplitPrefetcher), 零决策语义差异
 
 
         workflow.add_node("splitter", self.splitter_node)
@@ -218,91 +242,6 @@ class TDRClusterGraph:
         }
 
 
-    # ---------- two_phase: 并行簇内自足分析(split门) + 纯簇走原生serial reviewer ----------
-
-    def analyze_node(self, state: GraphState) -> Dict[str, Any]:
-        """Phase A: 全簇并发孤立内容分析 — 不输入分类树, 无共享状态, 零盲窗"""
-        clusters = list(state.get("clusters_list") or [])
-        unchanged = {
-            "tasks": state.get("tasks", deque()),
-            "categories": state.get("categories", {}),
-            "clusters_list": [],
-            "current_cluster": None,
-            "residual_clusters": state.get("residual_clusters", []),
-        }
-        if not clusters:
-            return {"analyses": [], **unchanged}
-
-        max_workers = int(CONFIG.get("runtime", {}).get("review_concurrency", 16) or 16)
-        print(f"🟣 内容分析: {len(clusters)} 簇 × {max_workers} 并发 (无树输入)")
-
-        def analyze(cluster: MicroCluster):
-            try:
-                analysis = self.llm_service.analyze_cluster_content(
-                    create_cluster_display_dict(cluster)
-                )
-                return cluster, analysis
-            except Exception as exc:
-                print(f"   ⚠️ {cluster.id} 分析失败: {str(exc)[:120]}")
-                return cluster, None
-
-        with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            analyses = list(pool.map(analyze, clusters))
-        return {"analyses": analyses, **unchanged}
-
-    def resolve_node(self, state: GraphState) -> Dict[str, Any]:
-        """Phase B(串行): impure(簇内自足判定)代码回炉重切 — 并行原语;
-        pure 走原生 serial reviewer(全量实时树, create/merge/split/inspect 全决策空间,
-        与 serial 模式同一函数同一 prompt — 同构 by construction, 零新语义面)"""
-        analyses = state.get("analyses") or []
-        print(f"⚖️ 串行评审: {len(analyses)} 条分析")
-        remaining = list(state.get("clusters_list") or [])
-        for cluster, analysis in analyses:
-            if analysis is None:
-                record_residual_cluster_tool(state, cluster, "内容分析失败(并行阶段)")
-                continue
-            purity = (analysis.get("purity") or "").lower()
-            if purity == "impure":
-                enqueue_resplit_task_tool(
-                    state, cluster, analysis.get("split_reason") or "semantic_impurity"
-                )
-                continue
-            finalized = [
-                create_category_display_dict(c) for c in state["categories"].values()
-            ]
-            try:
-                cluster.judge = self.llm_service.analyze_cluster_with_retry(
-                    finalized, create_cluster_display_dict(cluster)
-                )
-                action = (cluster.judge.get("action") or "").lower()
-                if action == "inspect":
-                    remaining = self._handle_inspect_request(
-                        state, cluster, cluster.judge.get("reason", "need_more_evidence")
-                    ) + remaining
-                    continue
-                self._apply_decision(state, cluster, cluster.judge)
-            except Exception as exc:
-                record_residual_cluster_tool(state, cluster, f"评审失败: {str(exc)[:120]}")
-        return {
-            "tasks": state.get("tasks", deque()),
-            "categories": state.get("categories", {}),
-            "clusters_list": remaining,
-            "current_cluster": None,
-            "residual_clusters": state.get("residual_clusters", []),
-            "analyses": [],
-        }
-
-    def _should_continue_v2(self, state: GraphState) -> str:
-        clusters = state.get("clusters_list") or []
-        if clusters:
-            print(f"   还有 {len(clusters)} 簇待分析, 继续并行分析")
-            return "analyze_more"
-        tasks = state.get("tasks", deque())
-        if len(tasks) > 0:
-            print(f"   队列还有 {len(tasks)} 个切分任务, 继续循环")
-            return "split_more"
-        print("   队列为空, 结束流程")
-        return "end"
 
     def _apply_decision(self, state: GraphState, current_cluster: MicroCluster, decision: Dict[str, Any]):
         """决策应用(串行/并发共用): 原 dispatcher_node 决策体。
@@ -321,11 +260,13 @@ class TDRClusterGraph:
                 decision.get("boundary_update", "no_update"),
             )
         elif action == "split":
-            enqueue_resplit_task_tool(
+            new_task = enqueue_resplit_task_tool(
                 state,
                 current_cluster,
                 decision.get("reason", "semantic_impurity"),
             )
+            if new_task is not None and self.split_prefetch is not None:
+                self.split_prefetch.submit(new_task, state["total_queries"])
         elif action == "moderation_rejected":
             record_residual_cluster_tool(
                 state, current_cluster, decision.get("reason", "内容审核拒绝")
@@ -467,6 +408,9 @@ class TDRClusterGraph:
             parent_cluster_id=None,
             split_reason="root",
         )
+
+        if self.split_prefetch is not None:
+            self.split_prefetch.submit(initial_task, total_queries)
         initial_state: GraphState = {
             "tasks": deque([initial_task]),
             "categories": {},

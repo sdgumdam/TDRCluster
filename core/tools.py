@@ -121,6 +121,7 @@ def enqueue_resplit_task_tool(state: GraphState, cluster: MicroCluster, split_re
         f"创建重切分任务 {new_task.id}: {len(cluster.queries)} 个查询, "
         f"depth={new_task.depth}, reason={split_reason}"
     )
+    return new_task
 
 
 def record_residual_cluster_tool(state: GraphState, cluster: MicroCluster, reason: str):

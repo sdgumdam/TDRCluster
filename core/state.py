@@ -167,6 +167,5 @@ class GraphState(TypedDict):
     total_queries: int
     min_cluster_size: int
     max_split_depth: int
-    analyses: Optional[List]  # two_phase 并行内容分析产出的 (cluster, analysis) 列表
     split_review_budget: Optional[int]
     split_review_volume: Optional[int]
