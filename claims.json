@@ -1,6 +1,6 @@
 [
   {
-    "package": "core/graph.py,main.py,evidence/graph_vs_d8af199.diff",
+    "package": "core/graph.py,main.py,evidence/graph_vs_d8af199.diff,evidence/main_tree_process_state.txt",
     "claim": "要求1 代码路径独立：基类 TDRClusterGraph 相对基线启动commit d8af199 零删改(evidence/graph_vs_d8af199.diff 全文为证)；预取钩子全部在文件尾追加的子类；main.py 在 review_mode!=two_phase 时实例化基类。过程事实以 git 输出工件为证(evidence/main_tree_process_state.txt)：主仓 HEAD=d8af199、工作树净(status 空)、未提交改动在 stash、基线进程 10:19:59 启动、双 worktree 隔离",
     "cards": [
       {
@@ -33,7 +33,7 @@
     ]
   },
   {
-    "package": "core/graph.py",
+    "package": "core/graph.py,core/prompts.py,evidence/decision_primitives_vs_d8af199.diff,evidence/tdr_smoke_pf_gate.log",
     "claim": "要求4 预取零决策语义差异——决策输入原语清单零改动：① reviewer prompt 装配(簇样本文本/证据轮次 create_cluster_display_dict, 分类树展示 name·definition·boundary·计数 create_category_display_dict, 动作集含 allow_inspect, taxonomy_context) ② LLM 调用参数(temperature/model/messages) ③ dispatcher 消费的决策字段(action/target_id/name_update/definition_update/boundary_update/reason)。以上原语构造代码与 prompts.py 零改动(diff 为证)；预取产物仅被子类 splitter_node 消费(物理切分, 先于评审, 不进任何决策原语)；类级锁序列化 numba(后台+direct 共用), 单worker",
     "cards": [
       {
