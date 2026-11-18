@@ -2,6 +2,25 @@
 🌐 网络异常(第1次), 0.5s 退避后重试: connection reset by peer
 🌐 网络异常(第2次), 1.0s 退避后重试: connection reset by peer
 🌐 网络异常(第3次), 2.0s 退避后重试: connection reset by peer
-Traceback (most recent call last):
-  File "<stdin>", line 17, in <module>
-NameError: name 'jitter' is not defined. Did you mean: 'iter'?
+PASS1 抖动恢复: 3连败后成功, 退避=['0.50s', '1.00s', '2.00s']
+🌐 网络异常(第1次), 0.5s 退避后重试: request timed out
+🌐 网络异常(第2次), 1.0s 退避后重试: request timed out
+🌐 网络异常(第3次), 2.0s 退避后重试: request timed out
+🌐 网络异常(第4次), 4.0s 退避后重试: request timed out
+🌐 网络异常(第5次), 8.0s 退避后重试: request timed out
+🌐 网络异常(第6次), 8.0s 退避后重试: request timed out
+🌐 网络异常(第7次), 8.0s 退避后重试: request timed out
+🌐 网络异常(第8次), 8.0s 退避后重试: request timed out
+🌐 网络异常(第9次), 8.0s 退避后重试: request timed out
+PASS2 持续断网: 10次耗尽后NetworkFatigue, 序列=['0.5', '1.0', '2.0', '4.0', '8.0', '8.0', '8.0', '8.0', '8.0']
+PASS3 非网络透传, 999混入=False
+🌐 网络异常(第1次), 0.5s 退避后重试: timed out
+🌐 网络异常(第2次), 1.0s 退避后重试: timed out
+🌐 网络异常(第3次), 2.0s 退避后重试: timed out
+🌐 网络异常(第4次), 4.0s 退避后重试: timed out
+🌐 网络异常(第5次), 8.0s 退避后重试: timed out
+🌐 网络异常(第6次), 8.0s 退避后重试: timed out
+🌐 网络异常(第7次), 8.0s 退避后重试: timed out
+🌐 网络异常(第8次), 8.0s 退避后重试: timed out
+🌐 网络异常(第9次), 8.0s 退避后重试: timed out
+PASS4 穿透验证: except Exception拦不住, 静默残差不可达
