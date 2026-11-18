@@ -11,8 +11,8 @@
     ]
   },
   {
-    "package": "scripts/resume_run.py,evidence/resume_evolution.diff",
-    "claim": "要求11 老路径无回归：--ckpt(replay pkl)入口行为不变——pkl 装载/摘要打印/图选类/invoke/落账逐语义等价(evidence/resume_evolution.diff 为证)。唯一行为差异如实声明: pkl 缺 config_sha256 键时旧代码 KeyError 崩溃、新代码跳过校验(replay pkl 恒有此键, 其校验路径不变); --ck 为纯新增分支",
+    "package": "scripts/resume_run.py,evidence/resume_evolution.diff,evidence/ckpt_path_equivalence.log",
+    "claim": "要求11 老路径无回归：--ckpt(replay pkl)入口行为不变——pkl 装载/摘要打印/图选类/invoke/落账逐语义等价(evidence/resume_evolution.diff 为证)。唯一行为差异如实声明: pkl 缺 config_sha256 键时旧代码 KeyError 崩溃、新代码跳过校验(replay pkl 恒有此键, 其校验路径不变); --ck 为纯新增分支; 执行等价工件: 新版对 replay pkl 装载段实跑成功且哈希校验对象存在, 旧版装载逻辑逐串保留",
     "cards": [
       {
         "sha256": "5ad8c45d54cfbf78c80acfcee85861395cac3b26899bc069dbef937c5ff5cb1d",
