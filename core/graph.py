@@ -477,9 +477,50 @@ class SplitPrefetcher:
 
 class PrefetchTDRClusterGraph(TDRClusterGraph):
     """two_phase 专用子类: 基类(d8af199)已含预取实例化与 _apply_decision/run 的 submit 钩子,
-    子类只补基类缺失的两件——splitter 的 take/direct 消费钩子与运行结束 shutdown;
+    子类补三件——splitter 的 take/direct 消费钩子、运行结束 shutdown、每决策后的中间分类树
+    快照(TREE_CK_DIR 轻量JSON: 类目定义+成员id+队列, 不含content, 失败不阻断主路径);
     本文件同名 SplitPrefetcher(锁版)在基类定义之后, 实例化时解析为锁版, 基类字节不动。
     review_mode != two_phase 时 main.py 必须实例化基类(基类不建预取器, 走原路径)。"""
+
+    def __init__(self, llm_service):
+        super().__init__(llm_service)
+        self._tree_run_id = __import__("os").environ.get("TREE_RUN_ID", "run")
+        self._tree_dec_count = 0
+
+    def _dump_tree(self, state: GraphState, n_dec: int):
+        """中间分类树快照: 原子写(tmp+replace), 每次覆盖同 run 文件。"""
+        import json as _json
+        import os as _os
+        from pathlib import Path as _P
+
+        out_dir = _P(_os.environ.get("TREE_CK_DIR", "ckpt/tree"))
+        out_dir.mkdir(parents=True, exist_ok=True)
+        tree = {
+            "decisions": n_dec,
+            "categories": {
+                cid: {
+                    "name": c.name,
+                    "definition": c.definition,
+                    "boundary_notes": c.boundary_notes,
+                    "query_ids": [q.id for q in c.queries],
+                }
+                for cid, c in state["categories"].items()
+            },
+            "pending_cluster_ids": [c.id for c in state.get("clusters_list", [])],
+            "queue_task_ids": [t.id for t in state.get("tasks", deque())],
+            "residual_ids": [c.id for c in state.get("residual_clusters", [])],
+        }
+        tmp = out_dir / f"tree_{self._tree_run_id}.json.tmp"
+        tmp.write_text(_json.dumps(tree, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(out_dir / f"tree_{self._tree_run_id}.json")
+
+    def _apply_decision(self, state: GraphState, current_cluster, decision):
+        super()._apply_decision(state, current_cluster, decision)
+        self._tree_dec_count += 1
+        try:
+            self._dump_tree(state, self._tree_dec_count)
+        except Exception as exc:  # 树快照失败不阻断决策主路径
+            print(f"⚠️ 树快照失败: {exc}")
 
     def splitter_node(self, state: GraphState) -> Dict[str, Any]:
         """覆写仅在有任务待切时生效; 返回块与基类尾部同构(基类无此缝可复用)。"""
