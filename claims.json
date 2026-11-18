@@ -1,62 +1,18 @@
 [
   {
-    "package": "core/graph.py,main.py,evidence/graph_at_d8af199.py,evidence/main_tree_process_state.txt",
-    "claim": "要求1 代码路径独立(用户原话'最最最重要 代码路径独立')：serial 基线所跑代码路径不被本分支改动——①core/graph.py 基类相对基线commit d8af199 零删改(evidence/graph_vs_d8af199.diff) ②review_mode=serial 时实例化原类原方法(main.py 选类) ③主树工作树冻结(evidence/main_tree_process_state.txt: HEAD=d8af199/status净/改动在stash)。实现细节(基类自带submit钩子/锁版同名类后置覆盖/子类补take钩子)由机器判,不属于本卡确认范围",
+    "package": "core/graph.py,scripts/hydrate_state.py,scripts/resume_run.py,evidence/state_ck_unit_test.log,evidence/state_ck_real_timing.log",
+    "claim": "要求10 真检查点恢复(并发线)：预取子类每决策原子写全态 CK——id 引用版(pydantic model_dump 单一真源, queries 替换为 query_ids, 其余字段含 judge/evidence_rounds 全保留), 几 MB 级 JSON 落 CK_DIR; 水合加载器按 query_id 从 embedding 缓存重建 Query 组装完整 GraphState(实测 190k 语料 20.7s 含缓存装载, 往返簇序/类目规模/任务序一致); resume --ck 水合直载零重算, 崩溃恢复=秒级; serial 基线路径零改动(改动全在子类与新脚本, 基类 vs d8af199 删改行=0)",
     "cards": [
       {
-        "sha256": "0cb94d5ecd31d80ccd76bfe6d4c5a2ac0078a085dd9263b42d390088502991f1",
-        "question": "要求1 = “serial 基线代码路径不被分支改动”，这是你的要求吗？",
-        "answer": "确认"
-      }
-    ]
-  },
-  {
-    "package": "services/path_root.py,services/dataset_manager.py,services/embedding_service.py",
-    "claim": "要求2 数据路径启动显式注入：数据根目录唯一真源 path_root.DATA_ROOT(TDR_DATA_DIR env，未注入回退相对路径 data)；dataset_manager 与 embedding_service 的硬编码 data/ 全部收敛到此单一真源，启动打印解析后路径供核验",
-    "cards": [
-      {
-        "sha256": "df28765e1d0e8ec52d6c87cc640b6b4ded8ed03a3b59dca19fdea7a8711d5da3",
-        "question": "要求2 数据路径显式注入：claim 是否如实转述？",
-        "answer": "确认"
-      }
-    ]
-  },
-  {
-    "package": "scripts/replay_rebuild.py,scripts/regen_definitions.py",
-    "claim": "要求3 精确重建可判定：逐事件锚点校验(簇ID/规模/待审数/类目包含数)，失配即中止；regex 行首锚定防自由文本错位；尾态在途簇塞回队首防续跑蒸发；快照携带 config sha256 供续跑前核对。不可恢复面如实声明并由 regen_definitions.py 补齐：create 时 definition/boundary、merge 时机 name/definition/boundary 更新内容、inspect 真实 reason(轮次唯一串替代)——全部以类目/簇真实成员重生成并标注⟨重生成非原文⟩。全量重放与续跑以本门通过为前置",
-    "cards": [
-      {
-        "sha256": "ce78278ea955b796ed1860084d888c08b7da058c949c8231ae5de9ac267cffde",
-        "question": "要求3（修正版）：claim 是否如实转述你的意图？",
-        "answer": "确认"
-      }
-    ]
-  },
-  {
-    "package": "core/graph.py,core/prompts.py,evidence/graph_at_d8af199.py,evidence/prompts_at_d8af199.py,evidence/split_equivalence_test.log,scripts/split_equivalence_test.py,evidence/tdr_resume_smoke.log",
-    "claim": "要求4 预取零决策语义差异：决策输入原语零改动——① reviewer prompt 装配(簇样本文本/证据轮次 create_cluster_display_dict, 分类树展示 create_category_display_dict, 动作集 allow_inspect, taxonomy_context) ② LLM 参数(temperature/model/messages) ③ dispatcher 决策字段(action/target_id/*_update/reason)——以上构造代码与 prompts.py 零改动(文件级 diff 为证)。预取产物与 serial 现算完全相同(同种子 random_state=42 纯函数, 同输入同输出), 经同一路径(clusters_list)进入评审; 全部决策输入与 serial 无差异。唯一差异: 计算时刻提前到评审等待期(后台单worker, 类级锁与 direct 兜底共用, numba 零并发)",
-    "cards": [
-      {
-        "sha256": "17be4e3d63a0ef93788ebe77dc1483a0ee1dca4e6ba3351bdc7b70078de141f8",
-        "question": "要求4 v5：是否如实转述你的“零决策语义差异”？",
-        "answer": "确认"
-      }
-    ]
-  },
-  {
-    "package": "scripts/resume_run.py",
-    "claim": "要求5 续跑路径：resume_run.py 从 CK 快照续跑——① config sha256 与快照不一致硬失败(--skip-config-check 显式豁免) ② 按 review_mode 选图类(two_phase=PrefetchTDRClusterGraph 子类, 否则基类) ③ invoke 前打印快照摘要(类目/待审/队列/残差)供肉眼核对 ④ 终态走 main.save_results 同一落账路径 ⑤ 不修改任何 serial 运行路径代码(纯新增脚本)",
-    "cards": [
-      {
-        "sha256": "cece632320a1c856f0bcfe8e98368ed56efe2775fe0d6fb8a784d997003089fe",
-        "question": "要求5 续跑路径：claim 是否如实转述？",
+        "sha256": "086977b93425f4981404eb90dfd2ae229152f75747b324fdd27b360b63569812",
+        "question": "要求10 = “真检查点：全态 CK 落盘+水合秒级恢复（先落并发线）”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
   },
   {
     "package": "scripts/resume_run.py,evidence/resume_evolution.diff",
-    "claim": "要求11 老路径无回归：--ckpt(replay pkl)入口的行为不变——pkl 装载/摘要打印/图选类/invoke/落账逐语义等价(evidence/resume_evolution.diff 为证: 老分支仅结构重排+一处声明过的放宽)。唯一行为差异如实声明: pkl 缺 config_sha256 键时, 旧代码 KeyError 崩溃, 新代码跳过哈希校验(replay pkl 恒有此键, 其校验路径不变); --ck 新入口为纯新增分支, 不与老路径共享可变状态",
+    "claim": "要求11 老路径无回归：--ckpt(replay pkl)入口行为不变——pkl 装载/摘要打印/图选类/invoke/落账逐语义等价(evidence/resume_evolution.diff 为证)。唯一行为差异如实声明: pkl 缺 config_sha256 键时旧代码 KeyError 崩溃、新代码跳过校验(replay pkl 恒有此键, 其校验路径不变); --ck 为纯新增分支",
     "cards": [
       {
         "sha256": "5ad8c45d54cfbf78c80acfcee85861395cac3b26899bc069dbef937c5ff5cb1d",
