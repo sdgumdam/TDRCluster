@@ -1,0 +1,4 @@
+✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/config/config.yaml
+⚡ 预取切分 task-a: 0 例 depth=1
+⚡ 预取命中 task-a
+PROXY UNIT TEST PASS: 命中不重复直算 / 未命中锁内直算 / 委托

@@ -1,80 +1,108 @@
 {
-  "generated_at": "2026-11-18T09:40:56.534Z",
+  "generated_at": "2026-11-18T09:50:20.808Z",
   "repo": "/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster",
-  "total_candidates": 7,
+  "total_candidates": 9,
   "violates": [
     {
       "file": "core/graph.py",
-      "line": 63,
+      "line": 68,
       "pattern": "dead_config_read",
       "desc": "split_prefetch_workers 死配置链",
       "code": "int(CONFIG.get(\"runtime\", {}).get(\"split_prefetch_workers\", 3) or 3),",
       "verdict": "violates",
-      "confidence": 0.38,
+      "confidence": 0.4,
       "probabilities": {
-        "violates": 0.59,
-        "not_debt": 0.23,
-        "insufficient": 0.18
-      }
-    },
-    {
-      "file": "core/graph.py",
-      "line": 442,
-      "pattern": "inline_dunder_import",
-      "desc": "内联__import__(应顶部正规导入)",
-      "code": "_CLUSTERING_LOCK = __import__(\"threading\").Lock()",
-      "verdict": "violates",
-      "confidence": 0.73,
-      "probabilities": {
-        "violates": 0.82,
-        "not_debt": 0.12,
-        "insufficient": 0.06
-      }
-    },
-    {
-      "file": "core/graph.py",
-      "line": 487,
-      "pattern": "inline_dunder_import",
-      "desc": "内联__import__(应顶部正规导入)",
-      "code": "self._tree_run_id = __import__(\"os\").environ.get(\"TREE_RUN_ID\", \"run\")",
-      "verdict": "violates",
-      "confidence": 0.73,
-      "probabilities": {
-        "violates": 0.82,
-        "not_debt": 0.13,
-        "insufficient": 0.05
-      }
-    },
-    {
-      "file": "core/graph.py",
-      "line": 526,
-      "pattern": "dup_block_marker",
-      "desc": "注释承认的复制块",
-      "code": "\"\"\"覆写仅在有任务待切时生效; 返回块与基类尾部同构(基类无此缝可复用)。\"\"\"",
-      "verdict": "violates",
-      "confidence": 0.33,
-      "probabilities": {
-        "violates": 0.55,
-        "not_debt": 0.29,
-        "insufficient": 0.16
-      }
-    },
-    {
-      "file": "scripts/resume_run.py",
-      "line": 71,
-      "pattern": "noqa",
-      "desc": "noqa 压制(未用import嫌疑)",
-      "code": "from core.state import Query  # noqa: F401",
-      "verdict": "violates",
-      "confidence": 0.31,
-      "probabilities": {
-        "violates": 0.54,
-        "not_debt": 0.1,
-        "insufficient": 0.36
+        "violates": 0.6,
+        "not_debt": 0.17,
+        "insufficient": 0.23
       }
     }
   ],
   "not_debt": [
+    {
+      "file": "core/graph.py",
+      "line": 484,
+      "pattern": "dup_block_marker",
+      "desc": "注释承认的复制块",
+      "code": "复制块不存在。生产面(基类 submit 钩子)与消费面在此会合, 基类零改动。\"\"\"",
+      "verdict": "not_debt",
+      "confidence": 0.76,
+      "probabilities": {
+        "violates": 0.03,
+        "not_debt": 0.84,
+        "insufficient": 0.13
+      }
+    },
+    {
+      "file": "scripts/jev_debt_audit.mjs",
+      "line": 19,
+      "pattern": "todo_fixme",
+      "desc": "TODO/FIXME 标记",
+      "code": "R2 不留技术债: 明知权宜(注释承认的捷径/TODO性质/死参数死配置/复制粘贴代替复用)即违规",
+      "verdict": "not_debt",
+      "confidence": 0.77,
+      "probabilities": {
+        "violates": 0.06,
+        "not_debt": 0.85,
+        "insufficient": 0.09
+      }
+    },
+    {
+      "file": "scripts/jev_debt_audit.mjs",
+      "line": 27,
+      "pattern": "inline_dunder_import",
+      "desc": "内联__import__(应顶部正规导入)",
+      "code": "{ id: \"inline_dunder_import\", rx: /__import__\\(/, desc: \"内联__import__(应顶部正规导入)\" },",
+      "verdict": "not_debt",
+      "confidence": 0.5,
+      "probabilities": {
+        "violates": 0.04,
+        "not_debt": 0.67,
+        "insufficient": 0.29
+      }
+    },
+    {
+      "file": "scripts/jev_debt_audit.mjs",
+      "line": 29,
+      "pattern": "todo_fixme",
+      "desc": "TODO/FIXME 标记",
+      "code": "{ id: \"todo_fixme\", rx: /\\b(TODO|FIXME|XXX)\\b/, desc: \"TODO/FIXME 标记\" },",
+      "verdict": "not_debt",
+      "confidence": 0.86,
+      "probabilities": {
+        "violates": 0.04,
+        "not_debt": 0.91,
+        "insufficient": 0.05
+      }
+    },
+    {
+      "file": "scripts/jev_debt_audit.mjs",
+      "line": 30,
+      "pattern": "dup_block_marker",
+      "desc": "注释承认的复制块",
+      "code": "{ id: \"dup_block_marker\", rx: /同构.*基类|复制.*基类|与基类尾部同构/, desc: \"注释承认的复制块\" },",
+      "verdict": "not_debt",
+      "confidence": 0.76,
+      "probabilities": {
+        "violates": 0.02,
+        "not_debt": 0.84,
+        "insufficient": 0.14
+      }
+    },
+    {
+      "file": "scripts/jev_debt_audit.mjs",
+      "line": 31,
+      "pattern": "dead_config_read",
+      "desc": "split_prefetch_workers 死配置链",
+      "code": "{ id: \"dead_config_read\", rx: /split_prefetch_workers/, desc: \"split_prefetch_workers 死配置链\" },",
+      "verdict": "not_debt",
+      "confidence": 0.61,
+      "probabilities": {
+        "violates": 0.05,
+        "not_debt": 0.74,
+        "insufficient": 0.21
+      }
+    },
     {
       "file": "scripts/resume_run.py",
       "line": 63,
@@ -82,11 +110,11 @@
       "desc": "getattr默认None(接口存在性未显式)",
       "code": "if getattr(graph, \"split_prefetch\", None) is not None and state[\"tasks\"]:",
       "verdict": "not_debt",
-      "confidence": 0.38,
+      "confidence": 0.42,
       "probabilities": {
-        "violates": 0.15,
-        "not_debt": 0.59,
-        "insufficient": 0.26
+        "violates": 0.1,
+        "not_debt": 0.61,
+        "insufficient": 0.29
       }
     },
     {
@@ -96,11 +124,11 @@
       "desc": "getattr默认None(接口存在性未显式)",
       "code": "if not self.client and not getattr(self, \"local_model\", None):",
       "verdict": "not_debt",
-      "confidence": 0.44,
+      "confidence": 0.52,
       "probabilities": {
-        "violates": 0.13,
-        "not_debt": 0.63,
-        "insufficient": 0.24
+        "violates": 0.07,
+        "not_debt": 0.68,
+        "insufficient": 0.25
       }
     }
   ],
