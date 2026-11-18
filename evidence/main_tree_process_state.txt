@@ -1,0 +1,12 @@
+== git -C 主仓 rev-parse HEAD
+d8af1998adc0fb7174df72670c90fa2218d90acd
+== git -C 主仓 status --porcelain (空=工作树净)
+== git -C 主仓 stash list
+stash@{0}: WIP on main: d8af199 refactor(two_phase): tp重定义为后台物理切分预取(SplitPrefetcher) — 拓扑统一serial, 决策路径零改变; 删纯度门全部分析代码(实测30%信息损失源)
+== git -C 主仓 worktree list
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster           d8af199 [main]
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch  b878a96 [feat/split-prefetch]
+== 基线进程启动时间(ps)与HEAD对照
+ PID STARTED                  COMMAND
+8060 Wed Nov 18 10:19:59 2026 /bin/zsh -l -c cd /Users/jingyuanrunsen/project/kuaizi_work_
+8062 Wed Nov 18 10:19:59 2026 /bin/zsh -l -c cd /Users/jingyuanrunsen/project/kuaizi_work_
