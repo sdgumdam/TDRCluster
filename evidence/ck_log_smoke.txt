@@ -1,0 +1,12 @@
+✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/config/config.yaml
+创建新类别 CAT-001 (测试类)，包含 0 个查询
+[CK原文] CAT-001 definition=定义原文ABC
+[CK原文] CAT-001 boundary=边界原文XYZ
+已更新类别 CAT-001 的名称
+[CK原文] CAT-001 name=新名
+已更新类别 CAT-001 的定义
+[CK原文] CAT-001 definition=新定义
+已更新类别 CAT-001 的边界说明
+[CK原文] CAT-001 boundary=新边界
+合并 mc-0001 -> CAT-001，现包含 0 个查询
+SMOKE OK
