@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 
 from config.config_loader import CONFIG
 from .embedding_service import EmbeddingService
+from .path_root import DATA_ROOT
 from core.state import Query
 
 
@@ -22,8 +23,9 @@ class DatasetManager:
 
     def __init__(self):
         self.config = CONFIG
-        # 硬编码路径设置
-        self.base_path = Path("data")
+        # 数据根目录单一真源: services/path_root.DATA_ROOT (TDR_DATA_DIR 启动注入)
+        self.base_path = DATA_ROOT
+        print(f"📂 数据根目录: {self.base_path.resolve()}")
         self.raw_path = self.base_path / "raw_data"
         self.processed_path = self.base_path / "processed_data"
 

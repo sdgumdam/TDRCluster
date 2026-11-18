@@ -14,7 +14,7 @@ from pathlib import Path
 from openai import OpenAI
 
 from config.config_loader import CONFIG
-
+from services.path_root import DATA_ROOT
 
 class EmbeddingService:
     """Embedding服务"""
@@ -178,7 +178,7 @@ class EmbeddingService:
     
     def save_embeddings(self, data: List[Dict[str, Any]], dataset_name: str) -> str:
         """保存embeddings数据"""
-        base_path = Path(f"data/processed_data/{dataset_name}")
+        base_path = DATA_ROOT / "processed_data" / dataset_name
         base_path.mkdir(parents=True, exist_ok=True)
         
         queries = [item['query'] for item in data]
@@ -217,7 +217,7 @@ class EmbeddingService:
     
     def load_embeddings(self, dataset_name: str) -> List[Dict[str, Any]]:
         """加载embeddings数据"""
-        base_path = Path(f"data/processed_data/{dataset_name}")
+        base_path = DATA_ROOT / "processed_data" / dataset_name
         
         # 优先加载完整备份
         backup_path = base_path / f"{dataset_name}_complete.pkl"

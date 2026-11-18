@@ -1,44 +1,44 @@
 [
   {
-    "package": "core/prompts.py",
-    "claim": "评审 prompt 与决策词汇未变：create/merge/split/inspect 与 XML 输出契约原样保留；capability 变体仅在 runtime.taxonomy_kind=capability 参数下启用，intent 默认文本与上游一致",
+    "package": "core/graph.py,main.py",
+    "claim": "要求1 代码路径独立：基类 TDRClusterGraph 与基线 commit(d8af199) 逐字节相同(git diff 删改行=0, 纯文件尾追加)；预取钩子全部在子类 PrefetchTDRClusterGraph；main.py 在 review_mode!=two_phase 时实例化基类——serial 路径走原类原方法",
     "cards": [
       {
-        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
-        "question": "claim1: 评审 prompt 与决策词汇未变(create/merge/split/inspect 与 XML 契约原样保留)",
+        "sha256": "137280afcf79aa731e6cd034bb914977824980934962e306ef1fcf3ba6495a8c",
+        "question": "要求1 代码路径独立：claim 是否如实转述你的意图？",
+        "answer": "确认"
+      }
+    ]
+  },
+  {
+    "package": "services/path_root.py,services/dataset_manager.py,services/embedding_service.py",
+    "claim": "要求2 数据路径启动显式注入：数据根目录唯一真源 path_root.DATA_ROOT(TDR_DATA_DIR env，未注入回退相对路径 data)；dataset_manager 与 embedding_service 的硬编码 data/ 全部收敛到此单一真源，启动打印解析后路径供核验",
+    "cards": [
+      {
+        "sha256": "df28765e1d0e8ec52d6c87cc640b6b4ded8ed03a3b59dca19fdea7a8711d5da3",
+        "question": "要求2 数据路径显式注入：claim 是否如实转述？",
+        "answer": "确认"
+      }
+    ]
+  },
+  {
+    "package": "scripts/replay_rebuild.py,scripts/regen_definitions.py",
+    "claim": "要求3 精确重建可判定：逐事件锚点校验(簇ID/规模/待审数/类目包含数)，失配即中止；regex 行首锚定防自由文本错位；尾态在途簇塞回队首防续跑蒸发；快照携带 config sha256 供续跑前核对。不可恢复面如实声明并由 regen_definitions.py 补齐：create 时 definition/boundary、merge 时机 name/definition/boundary 更新内容、inspect 真实 reason(轮次唯一串替代)——全部以类目/簇真实成员重生成并标注⟨重生成非原文⟩。全量重放与续跑以本门通过为前置",
+    "cards": [
+      {
+        "sha256": "ce78278ea955b796ed1860084d888c08b7da058c949c8231ae5de9ac267cffde",
+        "question": "要求3（修正版）：claim 是否如实转述你的意图？",
         "answer": "确认"
       }
     ]
   },
   {
     "package": "core/graph.py",
-    "claim": "merge_node 仍是持有完整当前态的串行 curator：按序应用提案、categories 随每条提案更新，不是并行归并",
+    "claim": "要求4 预取零决策语义差异：SplitPrefetcher 仅提前计算同种子(random_state=42)纯函数切分，reviewer/dispatcher 所见树状态与输入零改变；类级锁序列化 numba 调用(后台+主线程 direct 兜底共用)，单worker；take 命中消费预取结果——不存在任何改变 LLM 决策输入的路径",
     "cards": [
       {
-        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
-        "question": "claim2: merge 相仍是持有完整当前态的串行 curator",
-        "answer": "确认"
-      }
-    ]
-  },
-  {
-    "package": "core/graph.py",
-    "claim": "serial 评审路径完整保留：runtime.review_mode 默认 serial，原 reviewer/dispatcher 图装配与 _should_continue 不变，可回滚可 A/B",
-    "cards": [
-      {
-        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
-        "question": "claim5: serial 路径完整保留可回滚",
-        "answer": "确认"
-      }
-    ]
-  },
-  {
-    "package": "files:services/dataset_manager.py,services/embedding_service.py",
-    "claim": "并行 embedding 按行序终装配+连续前缀进度语义；进度与最终缓存原子写(tmp+fsync+rename)并携带 api_style+model_name 身份戳，换模型自动失效重建",
-    "cards": [
-      {
-        "sha256": "7854292d7fa3d9f292ac91e296640736a4b8ea051ffc8ebdc5024a4244ad6d78",
-        "question": "claim6: 失败隔离+缓存健壮性为行为改进(dataset_manager 并行 embedding 的行序/原子写/戳)",
+        "sha256": "18be6dbd6aab4067983ffa72ccfbc0c4103e12a7cb681ed70c1adb40e5bb1ea2",
+        "question": "要求4 预取零决策语义差异：claim 是否如实转述？",
         "answer": "确认"
       }
     ]

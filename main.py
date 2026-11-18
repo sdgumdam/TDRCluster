@@ -194,7 +194,12 @@ def main():
 
     print("🔧 初始化TDR聚类系统...")
     try:
-        tdr_graph = TDRClusterGraph(llm_service)
+        graph_cls = (
+            PrefetchTDRClusterGraph
+            if CONFIG.get("runtime", {}).get("review_mode", "serial") == "two_phase"
+            else TDRClusterGraph
+        )
+        tdr_graph = graph_cls(llm_service)
         print("   ✓ TDR系统初始化成功")
     except Exception as e:
         print(f"❌ 系统初始化失败: {e}")
