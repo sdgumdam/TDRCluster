@@ -4,6 +4,11 @@ LangGraph流程编排模块
 """
 import re
 from typing import List, Dict, Any, Tuple
+import json
+import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from collections import deque
 
 from langgraph.graph import StateGraph, END
@@ -439,11 +444,9 @@ class SplitPrefetcher:
     numba(UMAP/HDBSCAN)非线程安全: 类级锁序列化一切 perform_clustering 调用,
     主线程直算兜底共用同一把锁; 单worker(收益=评审期藏计算, 非切分间并行)。"""
 
-    _CLUSTERING_LOCK = __import__("threading").Lock()
+    _CLUSTERING_LOCK = threading.Lock()
 
     def __init__(self, clustering_service, workers: int = 1):
-        from concurrent.futures import ThreadPoolExecutor
-
         del workers  # 单worker定死: 锁的存在就是为串行化; 形参保留兼容基类 __init__ 的调用
         self._svc = clustering_service
         self._pool = ThreadPoolExecutor(max_workers=1)
@@ -475,25 +478,43 @@ class SplitPrefetcher:
         self._pool.shutdown(wait=False, cancel_futures=True)
 
 
+class _PrefetchConsumeProxy:
+    """切分消费代理: 基类 splitter 原样调用 perform_clustering, 本代理在其调用路径上
+    注入消费面——take 命中即返回预取结果, 未命中锁内直算。子类无需覆写 splitter,
+    复制块不存在。生产面(基类 submit 钩子)与消费面在此会合, 基类零改动。"""
+
+    def __init__(self, raw_service, prefetcher):
+        self._raw = raw_service
+        self._pf = prefetcher
+
+    def perform_clustering(self, task, total_queries: int):
+        hit = self._pf.take(task.id)
+        if hit is not None:
+            return hit
+        return self._pf.direct(task, total_queries)
+
+    def __getattr__(self, name):
+        return getattr(self._raw, name)
+
+
 class PrefetchTDRClusterGraph(TDRClusterGraph):
-    """two_phase 专用子类: 基类(d8af199)已含预取实例化与 _apply_decision/run 的 submit 钩子,
-    子类补三件——splitter 的 take/direct 消费钩子、运行结束 shutdown、每决策后的中间分类树
-    快照(TREE_CK_DIR 轻量JSON: 类目定义+成员id+队列, 不含content, 失败不阻断主路径);
-    本文件同名 SplitPrefetcher(锁版)在基类定义之后, 实例化时解析为锁版, 基类字节不动。
-    review_mode != two_phase 时 main.py 必须实例化基类(基类不建预取器, 走原路径)。"""
+    """two_phase 专用子类: 基类(d8af199)零改动地获得预取与树快照——
+    __init__ 把 clustering_service 换成消费代理(基类 splitter/reviewer 的原调用路径
+    即消费面), 基类自带的 _apply_decision/run submit 钩子即生产面;
+    子类自身只有树快照覆写与结束 shutdown。
+    review_mode != two_phase 时 main.py 实例化基类(基类不建预取器, 走原路径)。"""
 
     def __init__(self, llm_service):
         super().__init__(llm_service)
-        self._tree_run_id = __import__("os").environ.get("TREE_RUN_ID", "run")
+        self.clustering_service = _PrefetchConsumeProxy(
+            self.clustering_service, self.split_prefetch
+        )
+        self._tree_run_id = os.environ.get("TREE_RUN_ID", "run")
         self._tree_dec_count = 0
 
     def _dump_tree(self, state: GraphState, n_dec: int):
         """中间分类树快照: 原子写(tmp+replace), 每次覆盖同 run 文件。"""
-        import json as _json
-        import os as _os
-        from pathlib import Path as _P
-
-        out_dir = _P(_os.environ.get("TREE_CK_DIR", "ckpt/tree"))
+        out_dir = Path(os.environ.get("TREE_CK_DIR", "ckpt/tree"))
         out_dir.mkdir(parents=True, exist_ok=True)
         tree = {
             "decisions": n_dec,
@@ -511,7 +532,7 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
             "residual_ids": [c.id for c in state.get("residual_clusters", [])],
         }
         tmp = out_dir / f"tree_{self._tree_run_id}.json.tmp"
-        tmp.write_text(_json.dumps(tree, ensure_ascii=False), encoding="utf-8")
+        tmp.write_text(json.dumps(tree, ensure_ascii=False), encoding="utf-8")
         tmp.replace(out_dir / f"tree_{self._tree_run_id}.json")
 
     def _apply_decision(self, state: GraphState, current_cluster, decision):
@@ -522,32 +543,8 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
         except Exception as exc:  # 树快照失败不阻断决策主路径
             print(f"⚠️ 树快照失败: {exc}")
 
-    def splitter_node(self, state: GraphState) -> Dict[str, Any]:
-        """覆写仅在有任务待切时生效; 返回块与基类尾部同构(基类无此缝可复用)。"""
-        tasks = state.get("tasks", deque())
-        if state.get("clusters_list") or not tasks:
-            return super().splitter_node(state)
-
-        current_task = tasks.popleft()
-        pre = self.split_prefetch.take(current_task.id)
-        if pre is None:
-            pre = self.split_prefetch.direct(current_task, state["total_queries"])
-        review_clusters, residual_clusters = pre
-
-        all_residual_clusters = list(state.get("residual_clusters", []))
-        all_residual_clusters.extend(residual_clusters)
-        print(f"   切分完成: review={len(review_clusters)}, residual={len(residual_clusters)}")
-        return {
-            "tasks": tasks,
-            "categories": state.get("categories", {}),
-            "clusters_list": review_clusters,
-            "current_cluster": None,
-            "residual_clusters": all_residual_clusters,
-        }
-
     def run(self, initial_queries: List[Query]) -> Dict[str, Any]:
         final_state = super().run(initial_queries)
         if self.split_prefetch is not None:
             self.split_prefetch.shutdown()
         return final_state
-
