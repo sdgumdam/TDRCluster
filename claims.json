@@ -1,14 +1,8 @@
 [
   {
-    "package": "core/graph.py,main.py",
-    "claim": "要求1 代码路径独立：基类 TDRClusterGraph 与基线 commit(d8af199) 逐字节相同(git diff 删改行=0, 纯文件尾追加)；预取钩子全部在子类 PrefetchTDRClusterGraph；main.py 在 review_mode!=two_phase 时实例化基类——serial 路径走原类原方法",
-    "cards": [
-      {
-        "sha256": "137280afcf79aa731e6cd034bb914977824980934962e306ef1fcf3ba6495a8c",
-        "question": "要求1 代码路径独立：claim 是否如实转述你的意图？",
-        "answer": "确认"
-      }
-    ]
+    "package": "core/graph.py,main.py,evidence/graph_vs_d8af199.diff",
+    "claim": "要求1 代码路径独立(代码事实部分)：基类 TDRClusterGraph 相对基线启动commit d8af199 零删改(evidence/graph_vs_d8af199.diff 全文为证, 无一行删除)；预取钩子全部在文件尾追加的 PrefetchTDRClusterGraph 子类；main.py 在 review_mode!=two_phase 时实例化基类——serial 运行走原类原方法",
+    "cards": []
   },
   {
     "package": "services/path_root.py,services/dataset_manager.py,services/embedding_service.py",
@@ -34,13 +28,7 @@
   },
   {
     "package": "core/graph.py",
-    "claim": "要求4 预取零决策语义差异：SplitPrefetcher 仅提前计算同种子(random_state=42)纯函数切分，reviewer/dispatcher 所见树状态与输入零改变；类级锁序列化 numba 调用(后台+主线程 direct 兜底共用)，单worker；take 命中消费预取结果——不存在任何改变 LLM 决策输入的路径",
-    "cards": [
-      {
-        "sha256": "18be6dbd6aab4067983ffa72ccfbc0c4103e12a7cb681ed70c1adb40e5bb1ea2",
-        "question": "要求4 预取零决策语义差异：claim 是否如实转述？",
-        "answer": "确认"
-      }
-    ]
+    "claim": "要求4 预取零决策语义差异(可判形态)：reviewer_node/dispatcher_node/prompts/决策输入构造零改动(diff 为证)；预取产物仅在子类 splitter_node 覆写中被消费， reviewer 所见树状态、簇证据、动作集与 serial 同构；类级锁序列化 numba 调用(后台+direct 兜底共用)，单worker",
+    "cards": []
   }
 ]
