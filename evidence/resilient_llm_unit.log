@@ -1,17 +1,7 @@
 ✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/config/config.yaml
-🌐 网络异常(第1次), 5s 退避后重试: connection reset by peer
-🌐 网络异常(第2次), 15s 退避后重试: connection reset by peer
-✓ 网络抖动: 2连败后成功, 退避5s/15s
-🌐 网络异常(第1次), 5s 退避后重试: request timed out
-🌐 网络异常(第2次), 15s 退避后重试: request timed out
-🌐 网络异常(第3次), 45s 退避后重试: request timed out
-🌐 网络异常(第4次), 135s 退避后重试: request timed out
-🌐 网络异常(第5次), 405s 退避后重试: request timed out
-✓ 持续断网: 退避5/15/45/135/405s后 NetworkFatigue, 窗口=605s
-✓ 非网络透传(无退避), sleeps无999=True
-🌐 网络异常(第1次), 5s 退避后重试: timed out
-🌐 网络异常(第2次), 15s 退避后重试: timed out
-🌐 网络异常(第3次), 45s 退避后重试: timed out
-🌐 网络异常(第4次), 135s 退避后重试: timed out
-🌐 网络异常(第5次), 405s 退避后重试: timed out
-✓ 穿透验证: except Exception 拦不住 → 进程响亮死, 静默残差路径不可达
+🌐 网络异常(第1次), 0.5s 退避后重试: connection reset by peer
+🌐 网络异常(第2次), 1.0s 退避后重试: connection reset by peer
+🌐 网络异常(第3次), 2.0s 退避后重试: connection reset by peer
+Traceback (most recent call last):
+  File "<stdin>", line 17, in <module>
+NameError: name 'jitter' is not defined. Did you mean: 'iter'?

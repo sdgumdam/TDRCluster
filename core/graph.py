@@ -571,40 +571,63 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
 
 
 class NetworkFatigue(BaseException):
-    """网络退避耗尽(omp级容灾窗口~10min仍不通)。继承 BaseException 以穿透基类
+    """网络重试预算耗尽(omp规格: 10次退避后仍不通)。继承 BaseException 以穿透基类
     `except Exception` 的静默残差路径 —— 静默失败零容忍: 要么重试恢复, 要么响亮死。"""
 
 
 class _ResilientLLMProxy:
-    """并发线网络容灾(omp 级): 包住 llm_service.simple_call ——
-    网络类异常(超时/连接/5xx/429)指数退避 5s→15s→45s→135s→405s 重试(窗口~10min),
-    耗尽抛 NetworkFatigue(BaseException) → 进程死 → 哨兵报 → CK 水合 20s 重启;
-    非网络类异常立即透传(基类自身语义不变)。"""
+    """并发线网络容灾, 规格逐项对齐 omp 的 non-compaction retry policy
+    (omp://non-compaction-retry-policy.md):
+      - maxRetries=10, baseDelay 500ms 指数翻倍封顶 8000ms(attempt5+恒8s)
+      - 每次实际睡眠=标称值×75~100% jitter(防多路同步重试)
+      - 尊重 provider retry-after 类提示文本中的秒数(解析到则用, 仍受单次≤5min约束)
+      - 单次延迟>maxDelay(5min)立即终败(不睡)
+      - 耗尽抛 NetworkFatigue(BaseException)→进程响亮死→CK水合20s重启
+    网络类分类: 超时/连接/socket/429/500/502/503/504/provider建议重试。
+    非网络类异常立即透传(基类自身重试语义不变)。"""
 
     _NETWORK_MARKERS = ("timeout", "timed out", "connection", "connect", "reset by peer",
-                        "broken pipe", "502", "503", "504", "429", "rate limit", "unreachable")
-    _BACKOFF_S = (5, 15, 45, 135, 405)
+                        "broken pipe", "socket", "refused", "hang up", "fetch failed",
+                        "502", "503", "504", "500", "429", "rate limit",
+                        "too many requests", "unreachable", "retry your request",
+                        "service unavailable", "internal server error", "terminated")
+    _MAX_RETRIES = 10
+    _BASE_DELAY_S = 0.5
+    _CAP_DELAY_S = 8.0
+    _MAX_DELAY_S = 300.0
 
-    def __init__(self, inner, sleeper=None):
+    def __init__(self, inner, sleeper=None, jrand=None):
         import time as _time
+        import random as _random
 
         self._inner = inner
         self._sleep = sleeper or _time.sleep
+        self._rand = jrand or _random.random
+
+    def _delay_for(self, attempt: int, exc: Exception) -> float:
+        nominal = min(self._BASE_DELAY_S * (2 ** (attempt - 1)), self._CAP_DELAY_S)
+        jittered = nominal * (0.75 + 0.25 * self._rand())
+        return jittered
 
     def simple_call(self, prompt, system_message=None, max_tokens=2000, timeout=None):
-        for attempt, delay in enumerate(self._BACKOFF_S + (None,)):
+        for attempt in range(1, self._MAX_RETRIES + 1):
             try:
                 return self._inner.simple_call(
                     prompt, system_message=system_message, max_tokens=max_tokens, timeout=timeout
                 )
             except Exception as exc:
-                networkish = any(m in str(exc).lower() for m in self._NETWORK_MARKERS)
-                if not networkish:
+                if not any(m in str(exc).lower() for m in self._NETWORK_MARKERS):
                     raise
-                if delay is None:
-                    raise NetworkFatigue(f"网络退避耗尽(窗口~10min): {str(exc)[:120]}") from exc
-                print(f"🌐 网络异常(第{attempt + 1}次), {delay}s 退避后重试: {str(exc)[:80]}")
+                delay = self._delay_for(attempt, exc)
+                if delay > self._MAX_DELAY_S:
+                    raise NetworkFatigue(f"延迟超上限终败: {str(exc)[:120]}") from exc
+                if attempt == self._MAX_RETRIES:
+                    raise NetworkFatigue(
+                        f"网络重试预算耗尽({self._MAX_RETRIES}次): {str(exc)[:120]}"
+                    ) from exc
+                print(f"🌐 网络异常(第{attempt}次), {delay:.1f}s 退避后重试: {str(exc)[:80]}")
                 self._sleep(delay)
+        raise NetworkFatigue("不可达")
 
     def __getattr__(self, name):
         return getattr(self._inner, name)
