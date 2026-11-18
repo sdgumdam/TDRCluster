@@ -1,7 +1,7 @@
 [
   {
-    "package": "core/graph.py,scripts/hydrate_state.py,scripts/resume_run.py,evidence/state_ck_unit_test.log,evidence/state_ck_real_timing.log",
-    "claim": "要求10 真检查点恢复(并发线)：预取子类每决策原子写全态 CK——id 引用版(pydantic model_dump 单一真源, queries 替换为 query_ids, 其余字段含 judge/evidence_rounds 全保留), 几 MB 级 JSON 落 CK_DIR; 水合加载器按 query_id 从 embedding 缓存重建 Query 组装完整 GraphState(实测 190k 语料 20.7s 含缓存装载, 往返簇序/类目规模/任务序一致); resume --ck 水合直载零重算, 崩溃恢复=秒级; serial 基线路径零改动(改动全在子类与新脚本, 基类 vs d8af199 删改行=0)",
+    "package": "core/graph.py,scripts/hydrate_state.py,scripts/resume_run.py,evidence/state_ck_unit_test.log,evidence/state_ck_real_timing.log,evidence/base_class_body.diff",
+    "claim": "要求10 真检查点恢复(并发线)：预取子类每决策原子写全态 CK——id 引用版(pydantic model_dump 单一真源, queries 替换为 query_ids, 其余字段含 judge/evidence_rounds 全保留), 几 MB 级 JSON 落 CK_DIR; 水合加载器按 query_id 从 embedding 缓存重建 Query 组装完整 GraphState(实测 190k 语料 20.7s 含缓存装载, 往返簇序/类目规模/任务序一致); resume --ck 水合直载零重算, 崩溃恢复=秒级; serial 基线路径零改动——证据=evidence/base_class_body.diff: TDRClusterGraph 类体(class声明至run返回)在 d8af199 与当前逐字节相同(空diff), 文件级差异仅为类体上方的import追加与类体之后的追加块",
     "cards": [
       {
         "sha256": "086977b93425f4981404eb90dfd2ae229152f75747b324fdd27b360b63569812",
