@@ -1,0 +1,4 @@
+新版 --ckpt 装载: state键 = ['categories', 'clusters_list', 'current_cluster', 'max_split_depth', 'min_cluster_size', 'residual_clusters', 'split_review_budget', 'split_review_volume', 'tasks', 'total_queries']
+config_sha256 校验对象存在 = True
+旧版装载逻辑与哈希键读取: 逐串存在 ✓
+CKPT PATH EQUIVALENCE PASS: 新旧对同一 replay pkl 的装载与校验语义一致(仅缺键宽容度差异, 已声明)

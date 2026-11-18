@@ -53,5 +53,16 @@
         "answer": "确认"
       }
     ]
+  },
+  {
+    "package": "scripts/resume_run.py,evidence/resume_evolution.diff",
+    "claim": "要求11 老路径无回归：--ckpt(replay pkl)入口的行为不变——pkl 装载/摘要打印/图选类/invoke/落账逐语义等价(evidence/resume_evolution.diff 为证: 老分支仅结构重排+一处声明过的放宽)。唯一行为差异如实声明: pkl 缺 config_sha256 键时, 旧代码 KeyError 崩溃, 新代码跳过哈希校验(replay pkl 恒有此键, 其校验路径不变); --ck 新入口为纯新增分支, 不与老路径共享可变状态",
+    "cards": [
+      {
+        "sha256": "5ad8c45d54cfbf78c80acfcee85861395cac3b26899bc069dbef937c5ff5cb1d",
+        "question": "要求11 = “已有行为不回归：--ckpt 老路径(replay pkl 续跑)行为保持不变”，这是你的要求吗？",
+        "answer": "确认"
+      }
+    ]
   }
 ]
