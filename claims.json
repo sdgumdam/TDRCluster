@@ -1,11 +1,11 @@
 [
   {
-    "package": "core/graph.py,scripts/resume_run.py,scripts/jev_debt_audit.mjs,evidence/debt_audit.json,evidence/proxy_unit_test.log,config/config.yaml,config/config_intent.yaml,config/config_capability.yaml,config/config_intent_resume.yaml,config/config_capability_resume.yaml",
-    "claim": "要求9 技术债全量清理：①消费代理 _PrefetchConsumeProxy 取代子类 splitter 覆写——复制块删除, 基类 splitter 原调用路径即消费面(take命中/未命中锁内直算), 单元验证命中不重复直算+委托✓ ②__import__ 内联×2 改顶部正规导入 ③resume_run 未用import/变量清理 ④JEV债务审计器入仓(机械枚举+逐条判定)。基类相对 d8af199 仍零删改(仅文件顶部import区+文件尾追加, diff为证)。清理后审计复跑: 违规5→1(唯一残留为冻结基类的配置默认读, 键已从全部配置移除)",
+    "package": "core/graph.py,scripts/resume_run.py,scripts/hydrate_state.py,evidence/state_ck_unit_test.log",
+    "claim": "要求10 真检查点恢复：并发线(预取子类)每决策原子写全态 CK——id 引用版(类目含name/definition/boundary/成员query_id列表, 待审簇含id/depth/sample_texts/成员query_id, 队列任务含id/depth/parent/split_reason/成员query_id, 残差簇, 计数器split_review_volume与决策数), 几MB级JSON落CK_DIR; 水合加载器按 query_id 从 embedding 缓存重建 Query 对象(id/content/embedding)组装完整 GraphState; resume 载入后零重算(唯一计算=未预取任务的首切分), 崩溃恢复=秒级; serial 基线路径零改动(全部在子类与新脚本)",
     "cards": [
       {
-        "sha256": "eaea3d0d47ef929fb78b1a10a75cbf01aea21b03c5d553ef64b362eeb0f4b7e6",
-        "question": "要求9 = “审计出的技术债全量清理”，这是你的要求吗？",
+        "sha256": "086977b93425f4981404eb90dfd2ae229152f75747b324fdd27b360b63569812",
+        "question": "要求10 = “真检查点：全态 CK 落盘+水合秒级恢复（先落并发线）”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
