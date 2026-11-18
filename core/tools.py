@@ -42,6 +42,8 @@ def create_new_category_tool(state: GraphState, cluster: MicroCluster, decision:
 
     state["categories"][new_category_id] = new_category
     print(f"创建新类别 {new_category_id} ({new_category.name})，包含 {len(new_category.queries)} 个查询")
+    print(f"[CK原文] {new_category_id} definition={new_category.definition}")
+    print(f"[CK原文] {new_category_id} boundary={new_category.boundary_notes}")
     return new_category_id
 
 
@@ -68,14 +70,18 @@ def merge_into_existing_category_tool(
     if name_update != "no_update":
         existing_category.name = name_update
         print(f"已更新类别 {target_id} 的名称")
+        print(f"[CK原文] {target_id} name={name_update}")
 
     if definition_update != "no_update":
         existing_category.definition = definition_update
         print(f"已更新类别 {target_id} 的定义")
+        print(f"[CK原文] {target_id} definition={definition_update}")
 
     if boundary_update != "no_update":
         existing_category.boundary_notes = boundary_update
         print(f"已更新类别 {target_id} 的边界说明")
+        print(f"[CK原文] {target_id} boundary={boundary_update}")
+
 
     print(f"合并 {cluster.id} -> {target_id}，现包含 {len(existing_category.queries)} 个查询")
 
