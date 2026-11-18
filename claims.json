@@ -1,6 +1,6 @@
 [
   {
-    "package": "core/graph.py,scripts/resume_run.py,scripts/jev_debt_audit.mjs,evidence/debt_audit.json",
+    "package": "core/graph.py,scripts/resume_run.py,scripts/jev_debt_audit.mjs,evidence/debt_audit.json,evidence/proxy_unit_test.log",
     "claim": "要求9 技术债全量清理：①消费代理 _PrefetchConsumeProxy 取代子类 splitter 覆写——复制块删除, 基类 splitter 原调用路径即消费面(take命中/未命中锁内直算), 单元验证命中不重复直算+委托✓ ②__import__ 内联×2 改顶部正规导入 ③resume_run 未用import/变量清理 ④JEV债务审计器入仓(机械枚举+逐条判定)。基类相对 d8af199 仍零删改(仅文件顶部import区+文件尾追加, diff为证)。清理后审计复跑: 违规5→1(唯一残留为冻结基类的配置默认读, 键已从全部配置移除)",
     "cards": [
       {
