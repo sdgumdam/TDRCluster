@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // jev-verify-tdr — TDRCluster(Python/GitHub fork) 移植版：claims 来自本地 claims.json（无 GitLab MR），
 //   卡片证据要求与 §4.8 相同（sha256+问答+确认类）；包快照扩展 .py；diff 基线 origin/main。
+//   - --diff-baseline <ref>: 判定 diff 基线(默认 origin/main; 本分支场景用 fork/main)
 //   - 当前分支必须有 open MR，描述中必须携带 ```jev-claims 围栏 JSON 块
 //   - 每条 claim 必须携带 ask 卡片确认证据：cards[{sha256(64-hex), question, answer}]
 //     ——sha256 = 该次 ask 调用参数与人类回答规范 JSON 的 SHA256（来源锚，人工审计用；
@@ -28,6 +29,9 @@ const sbIdx = argv.indexOf("--source-branch");
 const SOURCE_BRANCH = (sbIdx >= 0 && argv[sbIdx + 1])
   ? argv[sbIdx + 1]
   : spawnSync("git", ["-C", REPO, "branch", "--show-current"], { encoding: "utf8" }).stdout.trim();
+
+const BASELINE_IDX = process.argv.indexOf("--diff-baseline");
+const DIFF_BASELINE = (BASELINE_IDX >= 0 && process.argv[BASELINE_IDX + 1]) || "origin/main";
 
 const git = (args) => spawnSync("git", ["-C", REPO, ...args], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).stdout ?? "";
 
@@ -139,7 +143,7 @@ async function verifyRepoMode(claims) {
     if (!byPkg.has(pkg)) byPkg.set(pkg, []);
     byPkg.get(pkg).push(c);
   }
-  const diff = git(["diff", "origin/main...HEAD"]);
+  const diff = git(["diff", `${DIFF_BASELINE}...HEAD`]);
   const readme = existsSync(join(REPO, "README.md")) ? readFileSync(join(REPO, "README.md"), "utf8") : "";
   const results = [];
   for (const [pkg, items] of byPkg) {
