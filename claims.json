@@ -1,11 +1,11 @@
 [
   {
-    "package": "core/tools.py,evidence/ck_log_smoke.txt",
-    "claim": "要求6 类目文本原文落日志：core/tools.py 在 create 时打印 definition/boundary 原文、merge 时打印 name/definition/boundary 更新原文([CK原文]前缀各一行)——5 个 print 追加(diff 共+6行, 含1空行)，不改变任何状态写入逻辑(diff 为证)；直调冒烟工件(evidence/ck_log_smoke.txt, 空簇夹具)实证 5 行落日志且状态断言通过。范围边界: inspect 的真实 reason 不在本 claim 覆盖内(仍不落日志)",
+    "package": "core/graph.py",
+    "claim": "要求7 中间分类树保存：PrefetchTDRClusterGraph 子类新增 _apply_decision 覆写(调 super 后每决策一次)与 _dump_tree——轻量 JSON(categories 的 name/definition/boundary_notes/query_ids + 待审簇id/队列任务id/残差id, 不含 content)原子写(tmp+replace)至 TREE_CK_DIR, 失败仅警告不阻断决策；基类 TDRClusterGraph 相对 d8af199 仍零删改(graph 追加块内新增, serial 路径不实例化子类故不触发)",
     "cards": [
       {
-        "sha256": "e8b840606999718bdb38f314a1f56d1da19ce48536f3ca432bc7f9e5631d3445",
-        "question": "要求6 = “日志补上缺失的类目文本原文，今后 run 可无损重放”，这是你的要求吗？",
+        "sha256": "3b566b13836cacb6448ed1e3c7543d21bbcd4f52d3f6f6702ced18d5c562221d",
+        "question": "要求7 = “中间分类树要周期性落盘保存”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
