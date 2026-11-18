@@ -1,0 +1,730 @@
+✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/config/config_smoke.yaml
+🚀 TDRCluster - LLM驱动的动态意图聚类系统
+
+⚙️ 初始化LLM服务...
+✓ LLM客户端初始化成功
+   模型: qwen3.8-omni-flash
+✅ LLM服务初始化完成
+
+⚙️ 运行参数:
+   数据集: intents_smoke
+   物理切分: UMAP + HDBSCAN
+   输出目录: output
+
+🔍 初始化数据集管理器...
+📂 数据根目录: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/data
+W1118 13:01:36.149000 82601 /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Could not reach the Hub (Cannot reach https://huggingface.co/api/models/BAAI/bge-small-zh-v1.5: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.). Using cached commit hash for 'BAAI/bge-small-zh-v1.5'.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 13276.07it/s]
+✓ 本地embedding模型就绪: BAAI/bge-small-zh-v1.5
+📂 成功加载数据集 intents_smoke: 300 条记录
+✓ 准备完成 300 个Query对象
+🔧 初始化TDR聚类系统...
+   ✓ TDR系统初始化成功
+
+⚡ 开始TDR聚类流程...
+   这可能需要几分钟时间，请耐心等待...
+======================================================================
+🚀 开始TDRCluster V2流程
+   初始数据: 300 个查询
+   物理切分引擎: UMAP + HDBSCAN
+⚡ 预取切分 task-9dc8c13d: 300 例 depth=0
+开始物理切分: task=task-9dc8c13d, depth=0, queries=300, min_cluster_size=10
+🔵 进入splitter节点
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+   大噪声簇 mc-0001(61例) 转入评审队列
+物理切分完成: review_clusters=10, residual_clusters=0
+  mc-0001: 61 个查询, depth=0
+  mc-0002: 61 个查询, depth=0
+  mc-0003: 27 个查询, depth=0
+  mc-0004: 23 个查询, depth=0
+  mc-0005: 14 个查询, depth=0
+  mc-0006: 24 个查询, depth=0
+  mc-0007: 34 个查询, depth=0
+  mc-0008: 15 个查询, depth=0
+  mc-0009: 18 个查询, depth=0
+  mc-0010: 23 个查询, depth=0
+⚡ 预取命中 task-9dc8c13d
+   切分完成: review=10, residual=0
+🟡 进入reviewer节点
+   评审 mc-0001: 61 个query, 剩余待审 9 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0001 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0001: split
+   处理 mc-0001: split
+创建重切分任务 task-0a738ccd: 61 个查询, depth=1, reason=该微簇虽然都属于视频生成 prompt，但内部明显混合了多类可复用意图：一是真人出镜口播/带货/剧情短视频，强调人物一致性、口型同步、时间轴表演、无字幕等；二是基于参考视频或参考图的局部替换编辑，如替换产品、删除字幕、替换台词并保持原运镜；三是非人物主导的工业设备、生产流程、动物喜剧、材质转化等可视化生成；四是古风互动、萌系战斗动画等风格化叙事。这些意图对应的能力词表差异较大，当前证据已足以判断其不纯，应返回进行更细粒度物理拆分。
+⚡ 预取切分 task-0a738ccd: 61 例 depth=1
+   仍有 9 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0002: 61 个query, 剩余待审 8 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-0a738ccd, depth=1, queries=61, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+   大噪声簇 mc-0011(26例) 转入评审队列
+物理切分完成: review_clusters=3, residual_clusters=0
+  mc-0011: 26 个查询, depth=1
+  mc-0012: 14 个查询, depth=1
+  mc-0013: 21 个查询, depth=1
+✅ LLM响应验证通过
+   ✓ mc-0002 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0002: split
+   处理 mc-0002: split
+创建重切分任务 task-6b87e7c7: 61 个查询, depth=1, reason=该微簇明显混合了多类不同任务意图：一类是以参考视频为基础进行局部替换或编辑，包括替换人物、产品、背景、服装、瓶盖、食物等，同时要求保持原视频动作、镜头、光影、时序一致，并去除字幕水印或替换台词/口型；另一类是从零生成广告或产品展示视频，如极夜文字动画、电商鞋类多分镜展示、熊猫剧情宣传、草莓礼盒特写、手机界面特写等，并不依赖对既有视频做主体替换；还包含视频延长并生成后续对话的独立意图。这些意图对应的能力需求差异较大，若合并为一个叶子类目会削弱边界清晰度，因此应退回进行下一轮物理拆分。
+⚡ 预取切分 task-6b87e7c7: 61 例 depth=1
+   仍有 8 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0003: 27 个query, 剩余待审 7 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-6b87e7c7, depth=1, queries=61, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+物理切分完成: review_clusters=2, residual_clusters=1
+  mc-0015: 28 个查询, depth=1
+  mc-0016: 32 个查询, depth=1
+  mc-0014: 1 个残差查询
+✅ LLM响应验证通过
+   ✓ mc-0003 决策: create
+🟢 进入dispatcher节点
+   处理 mc-0003: create
+   处理 mc-0003: create
+创建新类别 CAT-001 (商品推广短视频生成)，包含 27 个查询
+   仍有 7 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0004: 23 个query, 剩余待审 6 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0004 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0004: merge
+   处理 mc-0004: merge
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0004 -> CAT-001，现包含 50 个查询
+   仍有 6 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0005: 14 个query, 剩余待审 5 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0005 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0005: split
+   处理 mc-0005: split
+创建重切分任务 task-28ecdf3d: 14 个查询, depth=1, reason=该簇明显混合了多个不同商业视频意图：一类是本地家装、旧房改造、门窗、全屋定制、光伏屋面等服务引流短视频，核心是业主或师傅对话、口语化口播、评论扣1、点红心、免费上门测量或报价等留资转化，并常要求无字幕、参考场景与工装人物一致；另一类是商品或品牌广告演示短视频，如电吉他、花洒、手表、碗碟架等，核心是产品外观结构、材质细节、运镜特写、卖点口播或品牌落版，转化目标更偏购买或品牌认知。边界样本中还出现精装空间或客卫第一人称展示，偏向房产/装修成果展示。由于同一簇同时包含服务引流、商品广告和空间展示等不同意图，能力需求差异较大，直接合并到现有商品推广类别或新建单一类别都会导致边界模糊，应退回继续物理拆分。
+⚡ 预取切分 task-28ecdf3d: 14 例 depth=1
+   仍有 5 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0006: 24 个query, 剩余待审 4 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-28ecdf3d, depth=1, queries=14, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0017
+✅ LLM响应验证通过
+   ✓ mc-0006 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0006: merge
+   处理 mc-0006: merge
+已更新类别 CAT-001 的名称
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0006 -> CAT-001，现包含 74 个查询
+   仍有 4 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0007: 34 个query, 剩余待审 3 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0007 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0007: merge
+   处理 mc-0007: merge
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0007 -> CAT-001，现包含 108 个查询
+   仍有 3 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0008: 15 个query, 剩余待审 2 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0008 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0008: split
+   处理 mc-0008: split
+创建重切分任务 task-265439ab: 15 个查询, depth=1, reason=该簇主体是现代都市、乡村、历史、宴会厅等独立剧情短剧或影视化叙事片段，核心意图是生成具有角色一致性、分镜运镜、微表情表演、对白口型同步和音效匹配的剧情视频，现有 CAT-001 商品与品牌推广短视频生成并未覆盖这一独立叙事意图。但多样样本和边界样本中又混入清颜美白祛斑霜鱼塘口播、街头采访小黄车促销、咖啡馆偶遇中带品牌与直播间转化话术等明确以商品、服务或品牌推广和转化为目的的视频，这些应归入 CAT-001。两类意图在“是否以卖点展示、品牌曝光或促销转化为核心”上边界清晰，但当前微簇混杂，需先物理拆分后再分别合并至 CAT-001 或创建独立剧情叙事视频生成类目。
+⚡ 预取切分 task-265439ab: 15 例 depth=1
+   仍有 2 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0009: 18 个query, 剩余待审 1 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-265439ab, depth=1, queries=15, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0018
+✅ LLM响应验证通过
+   ✓ mc-0009 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0009: split
+   处理 mc-0009: split
+创建重切分任务 task-be83d519: 18 个查询, depth=1, reason=该微簇明显混合了多种不同任务意图：既有汽车TVC、二手车销售、AI功能展示、城市宣传等商品/服务/品牌推广视频，也有好莱坞科幻打斗、恐怖剧情、3D卡通对战、地下通道叙事等独立影视剧情短片；同时还包含养殖工船视频风格迁移、全息城市转场、代码瀑布、土星爆炸等纯特效/动态视觉生成，以及埃菲尔铁塔风光、工人夜校书写等非推广类影像表达。当前唯一已有类别CAT-001只能吸收其中的商品与品牌推广样本，无法覆盖纯剧情、特效、风格迁移和风光影像等意图。继续合并会导致类别边界模糊，因此应退回进行更细粒度的物理拆分，将推广类、剧情影视类、特效/风格迁移类等分离后再判断是否新建类别。
+⚡ 预取切分 task-be83d519: 18 例 depth=1
+   仍有 1 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0010: 23 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-be83d519, depth=1, queries=18, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0019
+✅ LLM响应验证通过
+   ✓ mc-0010 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0010: split
+   处理 mc-0010: split
+创建重切分任务 task-0ff0f199: 23 个查询, depth=1, reason=该簇的语义中心是非商品推广的影视化剧情/短剧片段生成，典型需求包括多角色分镜叙事、参考图人物与场景一致性、台词口型与音色匹配、运镜切换、玄幻/动作/情感表演、无字幕或无BGM控制，并覆盖古风、现代、玄幻、校园、真人写实、3D CG、二次元等风格变体。但证据中同时混入明确服务于商品推广的剧情样本，如祛斑精华 UGC 短剧、腋下护理喷雾口播带货、护肤套装与防晒产品 IP 短剧，这些应归入 CAT-001。由于同一微簇清晰混合了“独立剧情/影视化叙事视频生成”和“商品推广剧情视频生成”两种可复用意图，需先进行物理拆分，避免新建类目吸收商业带货样本，也避免现有商品推广类目被泛化。
+⚡ 预取切分 task-0ff0f199: 23 例 depth=1
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点开始物理切分: task=task-0ff0f199, depth=1, queries=23, min_cluster_size=10
+⚡ 预取命中 task-0a738ccd
+   切分完成: review=3, residual=0
+🟡 进入reviewer节点
+
+   评审 mc-0011: 26 个query, 剩余待审 2 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0020
+✅ LLM响应验证通过
+   ✓ mc-0011 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0011: merge
+   处理 mc-0011: merge
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0011 -> CAT-001，现包含 134 个查询
+   仍有 2 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0012: 14 个query, 剩余待审 1 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0012 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0012: split
+   处理 mc-0012: split
+创建重切分任务 task-9d43d845: 14 个查询, depth=2, reason=该微簇明显混合了多种不同任务意图。一方面，多个样本属于商品、服务或品牌推广短视频：如植入指定洗面奶的都市短剧、儿童内衣成长剧情广告、对讲机商业短片、助听器门店口播、企业品牌故事采访、矿车设备演示，以及以产品卖点或转化为目的的剧情化广告；这些可由现有 CAT-001 吸收。另一方面，也有若干样本是缺少明确商品、服务或品牌推广目的的独立剧情、角色表演或风格化短片：如走廊偶遇韩文对白短剧、寿宴诊脉电影感片段、古风 3D CG 人物争执镜头，以及边界样本中可能仅为搞笑钩子的电动车甩尾片段。此类任务的核心意图是人物关系、情节张力、表演质感或风格化叙事，而非产品推广。若整体并入 CAT-001，会突破其“不包含缺少商品、服务或品牌推广意图的独立剧情短片”的边界；若整体新建，又会把商业推广与非商业叙事混为一谈。此外，首个样本还带有基于原视频替换对白、屏幕内容并清除字幕的编辑型任务特征，可能需要单独甄别。因此建议退回进行物理拆分，将商业推广类样本归入 CAT-001，将非商业剧情/角色表演类样本拆出形成独立意图，并单独处理参考视频局部替换/去字幕类样本。
+⚡ 预取切分 task-9d43d845: 14 例 depth=2
+   仍有 1 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0013: 21 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-9d43d845, depth=2, queries=14, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0021
+✅ LLM响应验证通过
+   ✓ mc-0013 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0013: split
+   处理 mc-0013: split
+创建重切分任务 task-04f142e2: 21 个查询, depth=2, reason=该微簇明显混合了两类不同任务意图：一类是商品、服务或品牌推广短视频，包括口服液、护手油、康复新液、避孕套、水壶、藤编椅、AI软件试用、铸铜摆件等产品广告、种草、测评和参考视频替换；另一类是非商业或弱商业的个人Vlog、剧情短片、古风互动、搞笑动物、影视化叙事、账号赛道咨询等内容，主要目的并非商品/服务/品牌推广。现有CAT-001虽可吸收商业推广样本，但其边界明确排除缺少推广意图的独立剧情、纯艺术影像和个人Vlog，因此不宜整体合并，应送回进一步物理拆分。
+⚡ 预取切分 task-04f142e2: 21 例 depth=2
+   队列还有 7 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-6b87e7c7
+   切分完成: review=2, residual=1
+🟡 进入reviewer节点
+   评审 mc-0015: 28 个query, 剩余待审 1 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-04f142e2, depth=2, queries=21, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0022
+✅ LLM响应验证通过
+   ✓ mc-0015 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0015: split
+   处理 mc-0015: split
+创建重切分任务 task-12520d3d: 28 个查询, depth=2, reason=该微簇明显混合了两类不同任务意图：一类是以既有视频、图片或音频为参考进行编辑型生成，包括人物/背景/产品/食物替换、水印字幕贴纸擦除、分镜与动作复刻、视频延展、跨语言翻译与口型同步、静态图微动等；另一类是以商品、品牌或活动推广为目的的常规短视频生成，如草莓礼盒展示、VC小样机制视频、OPPO新品文字预告、熊猫IP上线宣传、手机日历界面特写等。前者核心是“参考驱动的视频编辑与一致性控制”，后者核心是“营销/展示内容生成”。现有 CAT-001 可承接部分推广样本，但无法自然吸收大量非推广的编辑替换任务；若整体新建一个类别，又会把营销短片与视频编辑能力混在一起，导致边界不清。因此应先物理拆分成“参考驱动视频编辑/替换生成”与“商品品牌推广或独立短片生成”两个方向后再归类。
+⚡ 预取切分 task-12520d3d: 28 例 depth=2
+   仍有 1 个micro-cluster待评审，继续review
+🟡 进入reviewer节点开始物理切分: task=task-12520d3d, depth=2, queries=28, min_cluster_size=10
+   评审 mc-0016: 32 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+物理切分完成: review_clusters=2, residual_clusters=1
+  mc-0024: 10 个查询, depth=2
+  mc-0025: 11 个查询, depth=2
+  mc-0023: 7 个残差查询
+✅ LLM响应验证通过
+   ✓ mc-0016 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0016: merge
+   处理 mc-0016: merge
+已更新类别 CAT-001 的名称
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0016 -> CAT-001，现包含 166 个查询
+   队列还有 7 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-28ecdf3d
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0017: 14 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0017 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0017: merge
+   处理 mc-0017: merge
+已更新类别 CAT-001 的名称
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0017 -> CAT-001，现包含 180 个查询
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-265439ab
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0018: 15 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0018 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0018: split
+   处理 mc-0018: split
+创建重切分任务 task-1079348a: 15 个查询, depth=2, reason=本簇明显混合了两类不同任务意图：一类是以多镜头分镜、角色一致性、台词口型、微表情、电影化光影和叙事冲突为核心的剧情短剧/人物表演视频生成，如家庭伦理、都市悬疑、霸总办公室、婚礼喜剧、历史纪实、2D漫剧、BJD人偶等样本，其主要目的并非商品、服务或品牌推广；另一类是明确服务于带货、促销、留资或产品卖点表达的短视频，如咖啡馆门口聊 Mardi 穿搭与直播间链接、鱼塘边口播清颜美白祛斑霜、街头采访口播小黄车全场一折等，应归入 CAT-001。另有乡村番茄新品种、老宅修缮纠纷等样本处于服务推广与剧情表达边界，需要进一步拆分判断。当前簇不宜整体 merge 到 CAT-001，也不宜直接 create 为新类，应先物理拆分为非商业剧情/人物表演生成与商业推广剧情两类后再决策。
+⚡ 预取切分 task-1079348a: 15 例 depth=2
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-be83d519
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0019: 18 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-1079348a, depth=2, queries=15, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0026
+✅ LLM响应验证通过
+   ✓ mc-0019 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0019: split
+   处理 mc-0019: split
+创建重切分任务 task-b1befc3d: 18 个查询, depth=2, reason=该微簇明显混合了多种不同任务意图：一部分是商品/服务/品牌推广视频，如汽车 TVC、二手车销售口播、AI 功能或还车服务展示；另一部分是非商业导向的影视化叙事与角色动作短片，如科幻打斗、恐怖剧情、3D 卡通对战、工人夜校剧情；还包括纯特效、风格迁移或转场类任务，如土星爆炸、全息城市穿越、养殖工船视频 CG 风格重绘；另有城市/地标宣传或风光展示这类边界不清的推广意图。这些样本在“是否以商业转化/品牌推广为核心”“是否为剧情/特效/风格化影像”“是否为参考视频编辑或风格迁移”上差异显著，继续作为单一类目会削弱 CAT-001 的商业推广边界，也不足以直接创建一个稳定的新类目。应退回进行更细粒度物理拆分，分离商业推广、影视叙事/特效、风格迁移/视频编辑、城市或地标宣传等不同意图。
+⚡ 预取切分 task-b1befc3d: 18 例 depth=2
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-0ff0f199
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0020: 23 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-b1befc3d, depth=2, queries=18, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0027
+✅ LLM响应验证通过
+   ✓ mc-0020 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0020: split
+   处理 mc-0020: split
+创建重切分任务 task-c1a82a32: 23 个查询, depth=2, reason=该簇整体以多分镜剧情短剧、角色表演、玄幻动作、影视化叙事为核心，代表样本大多不以商品、服务或品牌推广为目的，而是要求参考图人物/场景一致性、台词口型与参考音色匹配、运镜与特效控制，明显超出 CAT-001 的商业推广边界；但多样与边界样本中又混入 Aubine 祛斑精华、倾颜氯化羟铝喷雾、乐宝护肤套装等明确以产品卖点、使用效果或转化为核心的剧情化广告/种草视频，这些应归入 CAT-001。簇内同时存在“非商业剧情短剧生成”与“商品/品牌剧情广告生成”两种可复用且边界不同的意图，需退回进行物理拆分后再决定新建或合并。
+⚡ 预取切分 task-c1a82a32: 23 例 depth=2
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-9d43d845
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0021: 14 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-c1a82a32, depth=2, queries=23, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0028
+✅ LLM响应验证通过
+   ✓ mc-0021 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0021: split
+   处理 mc-0021: split
+创建重切分任务 task-191485a2: 14 个查询, depth=3, reason=该微簇明显混合了两类不同意图：一类是可归入现有 CAT-001 的商品、服务、品牌、机构或 App/游戏推广短视频，包括产品剧情广告、门店口播、工业设备演示、参考视频商业化改写等；另一类是缺少明确商品、服务、品牌、机构或 IP 推广对象的纯剧情短剧/角色表演片段，如走廊偶遇短剧、寿宴诊脉戏份、古风 3D 角色短剧等。后者更接近非商业叙事或角色影像生成意图，若整体并入 CAT-001 会突破其“必须服务于推广/转化/品牌心智”的边界并导致类别泛化，因此应退回进行进一步物理拆分。
+⚡ 预取切分 task-191485a2: 14 例 depth=3
+   队列还有 6 个任务，继续循环
+开始物理切分: task=task-191485a2, depth=3, queries=14, min_cluster_size=10🔵 进入splitter节点
+⚡ 预取命中 task-04f142e2
+
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0022: 21 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0029
+✅ LLM响应验证通过
+   ✓ mc-0022 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0022: split
+   处理 mc-0022: split
+创建重切分任务 task-1d6b4c15: 21 个查询, depth=3, reason=该簇明显混合了两类不同任务意图：一类是以商品、服务、品牌或产品卖点转化为核心的推广与编辑视频，如医药口服液情景广告、香水口播种草、护手油与藏红花参考视频替换、软件免费试用动态展示、家居厨具摆件测评与材质转化展示；另一类是不以商业推广或转化为主要目的的独立叙事、日常或娱乐内容，如博主个人 vlog 与账号互动、影视剧式老人离别片段、古风双人花房互动、雪地动物搞笑短片。前者可归入现有 CAT-001，后者会突破 CAT-001 关于商品、服务、品牌、机构或 IP 角色推广的边界；同时本簇尚未形成单一稳定的新意图类别，需送回进行更细的物理拆分后再决定 merge 或 create。
+⚡ 预取切分 task-1d6b4c15: 21 例 depth=3
+   队列还有 6 个任务，继续循环
+开始物理切分: task=task-1d6b4c15, depth=3, queries=21, min_cluster_size=10
+🔵 进入splitter节点
+⚡ 预取命中 task-12520d3d
+   切分完成: review=2, residual=1
+🟡 进入reviewer节点
+   评审 mc-0024: 10 个query, 剩余待审 1 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0030
+✅ LLM响应验证通过
+   ✓ mc-0024 决策: create
+🟢 进入dispatcher节点
+   处理 mc-0024: create
+   处理 mc-0024: create
+创建新类别 CAT-002 (通用视频编辑与参考驱动生成)，包含 10 个查询
+   仍有 1 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0025: 11 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0025 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0025: split
+   处理 mc-0025: split
+创建重切分任务 task-0a340a87: 11 个查询, depth=3, reason=该簇并非单一可复用意图：代表与多样样本中既有明确商品/品牌推广的产品展示、礼盒/传送带/新品预告文字动画（可归 CAT-001），也有以参考图/视频驱动的非商业动态生成、静态主体微动和画面重绘（可归 CAT-002）；边界样本还出现剧情对白角色表演、设备日历 UI 手部交互、抽象循环光效/旗帜氛围等明显超出现有两类边界的独立意图。继续合并会模糊 CAT-001/CAT-002 的商业推广与通用参考编辑边界，因此应退回下一轮物理拆分后再决定创建或合并。
+⚡ 预取切分 task-0a340a87: 11 例 depth=3
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-1079348a
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0026: 15 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-0a340a87, depth=3, queries=11, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0031
+✅ LLM响应验证通过
+   ✓ mc-0026 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0026: split
+   处理 mc-0026: split
+创建重切分任务 task-5b31bdf0: 15 个查询, depth=3, reason=该微簇明显混合了两类不同任务意图：一类是以故事表达、人物表演、分镜叙事为核心的非商业剧情短剧/影视化片段生成，包括家庭伦理、漫剧、悬疑美剧风、历史纪实、婚礼喜剧、霸总短剧、数字人/BJD 角色表演等；另一类是明确服务于商品、品牌或转化目标的带货/促销短视频，如咖啡馆穿搭引导直播间、美白祛斑霜乡村口播、街头采访“小黄车全场一折”等，应归入 CAT-001。当前簇内还夹杂服装/人物参考一致性展示、修缮纠纷剧情等边界样本，需进一步物理拆分后再判断是否新建“剧情短剧与影视化叙事视频生成”类目或将商业样本并入 CAT-001。
+⚡ 预取切分 task-5b31bdf0: 15 例 depth=3
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-b1befc3d
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0027: 18 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-5b31bdf0, depth=3, queries=15, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0032
+✅ LLM响应验证通过
+   ✓ mc-0027 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0027: split
+   处理 mc-0027: split
+创建重切分任务 task-393df8ee: 18 个查询, depth=3, reason=该微簇明显混合了多类不同意图：一部分是以好莱坞科幻、恐怖剧情、3D卡通打斗、赛博朋克特效、城市/地标影像等为核心的非商业影视级剧情与视觉特效短片生成；一部分是汽车TVC、二手车销售、车批发引流、还车服务介绍、城市宣传等明确服务于商品、服务、品牌或机构推广的商业短视频，应归入 CAT-001；还有一部分是对参考视频做风格迁移、结构锁定、CG渲染转换的通用视频编辑/参考驱动生成，应归入 CAT-002。当前证据已足以判断其语义混杂，需退回进行更细粒度物理拆分，不宜直接合并或创建单一新类。
+⚡ 预取切分 task-393df8ee: 18 例 depth=3
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-c1a82a32
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0028: 23 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-393df8ee, depth=3, queries=18, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0033
+✅ LLM响应验证通过
+   ✓ mc-0028 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0028: split
+   处理 mc-0028: split
+创建重切分任务 task-1f7bd985: 23 个查询, depth=3, reason=该簇的语义中心是参考图、参考音频和多分镜脚本驱动的非商业剧情短剧/影视化叙事视频生成，强调角色一致性、场景还原、运镜、台词口型、特效和剧情连贯。但证据中混入了明确以商品、服务或IP推广为核心的剧情广告样本，例如祛斑精华UGC短剧、腋下护理喷雾口播、3D卡通IP递送护肤套装等，这些应归入 CAT-001。当前 micro-cluster 同时包含“非商业叙事短剧生成”和“商业推广剧情生成”两种可复用意图，边界不够纯，需要先物理拆分后再分别判断 merge 或 create。
+⚡ 预取切分 task-1f7bd985: 23 例 depth=3
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-191485a2
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0029: 14 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-1f7bd985, depth=3, queries=23, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0034
+✅ LLM响应验证通过
+   ✓ mc-0029 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0029: split
+   处理 mc-0029: split
+创建重切分任务 task-08a451b7: 14 个查询, depth=4, reason=该微簇明显混合了多种可区分意图：一部分样本属于商品、服务、品牌或机构推广的剧情广告、口播带货、产品植入与参考视频改稿，应归入 CAT-001；一部分样本核心是基于参考视频替换对白、屏幕内容、字幕清理与音画一致性控制，更接近 CAT-002 的通用视频编辑与参考驱动生成；还有一部分样本是无明确商品/品牌转化目的的剧情短剧、人物对白场景、古风/都市/校园叙事片段或纯趣味短片，强调多角色一致性、站位、口型、情绪、音效和镜头语言，现有类目未稳定覆盖。另有工业设备运行演示等样本也可能需进一步区分是产品展示还是通用写实生成。由于同一微簇同时包含推广型视频、编辑型任务和独立叙事型短剧等多种意图，直接合并或新建都会造成边界模糊，应退回进行下一轮物理拆分。
+⚡ 预取切分 task-08a451b7: 14 例 depth=4
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-1d6b4c15
+   切分完成: review=1, residual=0
+开始物理切分: task=task-08a451b7, depth=4, queries=14, min_cluster_size=10
+🟡 进入reviewer节点
+   评审 mc-0030: 21 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0035
+✅ LLM响应验证通过
+   ✓ mc-0030 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0030: split
+   处理 mc-0030: split
+创建重切分任务 task-f7988fe1: 21 个查询, depth=4, reason=该微簇明显混合了多种可区分意图：一部分样本属于商品、服务、品牌或IP推广短视频生成与编辑，如口服液广告、香水种草、护手油/避孕套/水壶/藤编椅等产品推广及参考视频产品台词替换；另一部分属于通用视频编辑与参考驱动生成，如替换参考视频中的食物、产品、字幕和台词并保持原视频其余内容不变；还存在不以商业推广为核心目的的独立剧情、生活化Vlog、古风互动、动物喜剧、写实影视片段等非商业叙事生成。三类意图在是否以卖点展示、转化获客、品牌推广为核心，以及是否依赖参考视频编辑约束上边界不同，继续合并会污染现有CAT-001或CAT-002的语义纯度，应送回进行更细粒度物理拆分。
+⚡ 预取切分 task-f7988fe1: 21 例 depth=4
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+开始物理切分: task=task-f7988fe1, depth=4, queries=21, min_cluster_size=10
+⚡ 预取命中 task-0a340a87
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0031: 11 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0036
+✅ LLM响应验证通过
+   ✓ mc-0031 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0031: split
+   处理 mc-0031: split
+创建重切分任务 task-e2df76be: 11 个查询, depth=4, reason=该微簇明显混合了多种不同任务意图：一部分样本属于商品、品牌或产品推广导向的视频生成，如 OPPO 新品预告文字动画、草莓礼盒展示、VC 小样产品陈列、品牌字体/Logo 动态展示、传送带产品与标签展示等，应归入 CAT-001；另一部分样本更偏向非推广导向的参考驱动视觉生成或编辑，如基于参考图/视频的主播动作复刻、循环流光与旗帜云层微动、宝宝静态主体冻结加背景飘散、双人剧情对话生成、手机日历 UI 点击演示等，其中若干并不以卖点、转化、品牌或机构推广为核心，更接近 CAT-002 或需要进一步拆出的通用参考驱动生成/动态视觉特效意图。由于同一簇内同时存在商业推广生成、通用参考一致性生成、纯视觉循环特效和剧情/界面演示等边界差异较大的意图，直接合并会模糊现有类别边界，建议退回进行下一轮物理拆分。
+⚡ 预取切分 task-e2df76be: 11 例 depth=4
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+开始物理切分: task=task-e2df76be, depth=4, queries=11, min_cluster_size=10
+⚡ 预取命中 task-5b31bdf0
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0032: 15 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0037
+✅ LLM响应验证通过
+   ✓ mc-0032 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0032: split
+   处理 mc-0032: split
+创建重切分任务 task-b0108732: 15 个查询, depth=4, reason=该微簇的语义中心是非商业剧情短剧、影视化人物叙事与角色表演生成，但证据中同时混入明确商品/品牌/直播转化广告，如祛斑霜口播带货、Mardi穿搭与直播间引流、街头小黄车促销口播；还可能包含纯人物情绪表演、历史纪实等非同一意图样本。当前簇同时跨越“剧情叙事生成”和“商业推广短视频生成”两类可复用意图，纯度不足，应先进行下一轮物理拆分，再决定新建剧情类或并入 CAT-001。
+⚡ 预取切分 task-b0108732: 15 例 depth=4
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-393df8ee
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0033: 18 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-b0108732, depth=4, queries=15, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0038
+✅ LLM响应验证通过
+   ✓ mc-0033 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0033: split
+   处理 mc-0033: split
+创建重切分任务 task-5de891bf: 18 个查询, depth=4, reason=该簇明显混合了多类不同任务意图：一是以剧情、动作、科幻、恐怖、卡通或抽象视觉为核心的非商业影视化与特效短片生成；二是汽车TVC、二手车销售、AI功能展示、城市宣传等具有推广转化目的的商业短视频；三是基于原视频做风格迁移并锁定船体结构与镜头运动的通用参考驱动编辑。它们分别更接近现有CAT-001、CAT-002以及可能需要新建的影视叙事与特效类目，当前簇纯度不足，应退回进一步物理拆分。
+⚡ 预取切分 task-5de891bf: 18 例 depth=4
+   队列还有 6 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-1f7bd985
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0034: 23 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-5de891bf, depth=4, queries=18, min_cluster_size=10
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0039
+✅ LLM响应验证通过
+   ✓ mc-0034 决策: create
+🟢 进入dispatcher节点
+   处理 mc-0034: create
+   处理 mc-0034: create
+创建新类别 CAT-003 (剧情短剧与影视化叙事视频生成)，包含 23 个查询
+   队列还有 5 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-08a451b7
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0035: 14 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0035 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0035: split
+   处理 mc-0035: split
+记录残差簇 mc-0035: 达到最大切分深度 4
+   队列还有 4 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-f7988fe1
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0036: 21 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0036 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0036: split
+   处理 mc-0036: split
+记录残差簇 mc-0036: 达到最大切分深度 4
+   队列还有 3 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-e2df76be
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0037: 11 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0037 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0037: split
+   处理 mc-0037: split
+记录残差簇 mc-0037: 达到最大切分深度 4
+   队列还有 2 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-b0108732
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0038: 15 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0038 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0038: split
+   处理 mc-0038: split
+记录残差簇 mc-0038: 达到最大切分深度 4
+   队列还有 1 个任务，继续循环
+🔵 进入splitter节点
+⚡ 预取命中 task-5de891bf
+   切分完成: review=1, residual=0
+🟡 进入reviewer节点
+   评审 mc-0039: 18 个query, 剩余待审 0 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0039 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0039: split
+   处理 mc-0039: split
+记录残差簇 mc-0039: 达到最大切分深度 4
+   队列为空，结束流程
+✅ TDRCluster V2流程完成
+   最终类别数: 3
+   残差簇数: 7
+======================================================================
+✅ TDR聚类流程完成!
+
+======================================================================
+📊 TDRCluster V2结果摘要 - intents_smoke
+======================================================================
+最终类别数: 3
+残差簇数: 7
+剩余任务数: 0
+总分类查询数: 213
+残差查询数: 87
+
+📁 类别详情:
+
+1. CAT-001 | 商品、服务与品牌推广短视频生成与编辑 (180 个查询)
+   定义: 生成或编辑以商品、服务、品牌、机构或IP/虚拟角色推广为核心目的的短视频，涵盖电商种草、广告宣传片、产品演示、穿戴类展示，医药健康、保健品、医疗器械、医美、保险理财、美妆护肤、防晒洗护、功效护理、汽车用品、宠物用品、厨具烘焙、香氛香水、母婴食品、体重管理/健康咨询等，以及本地生活与家装服务（旧房改造、装修施工、门窗/厨卫/全屋定制、光伏屋面、房产/室内空间展示、门店获客等）的引流留资视频；任务可围绕产品或服务外观、使用或诊疗体验、施工/改造过程、空间效果、质地与功效演示、前后对比、卖点、用户证言与促销转化进行可视化表达，既可根据参考图/文本从零生成，也可基于给定参考视频（含其深度、姿态、运镜或动作信息）做局部替换与重绘：在保留原视频动作、镜头、时序、光影和非指定内容的前提下，替换人物面部/身份、服装、产品外观/颜色/包装、道具、背景、发型、文字字幕或台词，并实现口型、音色、物理形变与参考素材一致；常采用口播、多角色剧情、沉浸式体验、一镜到底、SKU几何锁定、真实物理交互、ASMR功效测试、生产/施工流程纪实、延时改造、概念化剧情广告、拟人或特效化呈现等表达，并保持参考素材一致、镜头剪辑连贯，以及口播、对白、音效或配乐等视听元素匹配。
+   边界: 包含食品、饮料、日用品、厨具、烘焙/烧烤工具、服装、鞋包、配饰、珠宝、汽车内饰收纳用品、宠物用品、香氛香水、母婴食品、医药健康产品、保健品、医疗器械、医美机构、体重管理/健康咨询、保险或金融服务，以及美妆个护、护肤精油、面霜、防晒、洗发水、止汗/腋用护理、祛斑霜、面膜、假睫毛等功效产品的带货口播、沉浸式体验、产品质感特写、使用或诊疗过程演示、局部涂抹/发泡/融化/前后对比、防水拉扯等ASMR测试、拟人或特效化卖点表达、医患或顾问对话、家庭/集市/户外/影院/车内/后院等剧情种草、机构宣传片、生产流程纪实、模特上身展示、多角度版型展示、穿搭种草、街头采访、电商直播和促销引导视频；也包含本地生活与家装服务推广，如旧房改造、装修避坑、门窗/厨卫/全屋定制、光伏屋面、房产或室内空间展示、门店团队口号、免费测量/报价/上门、评论扣1/私信留资/点赞转发等获客转化视频，以及以抽象剧情、悬念隐喻、人物情绪或生活化片段承载品牌心智、产品铺垫或转化意图的广告短片，以及为商品、服务、品牌、机构或IP/虚拟角色宣传而改造参考视频的编辑任务，如替换人物、服装、产品、道具、背景、颜色、字幕/水印或台词，或以参考视频的深度/姿态/运镜为约束替换角色/场景，同时保留原视频其余动作、镜头、时序并同步口型、音色、光影和物理交互。剧情化、空间展示化或编辑化样本只有在其叙事/改造/展示明确或可合理识别为服务于商品、服务、品牌、机构、IP角色推广、产品卖点、使用效果、施工/空间效果或转化时归入本类。不包含以故事表达、知识科普或教程、纯艺术影像、直播录屏、通用非商业视频编辑/人脸替换/角色替换、无商业获客或推广意图的纯看房/空间漫游/装修记录为主要目的且缺少商品、服务、品牌、机构或IP角色推广意图的独立任务，也不包含仅要求图片、文案而非视频生成的任务。
+   样本:
+     1. 原始prompt：无字幕，无背景音乐，核心风格：强互动、口语化、强共鸣，真实协调，零食种草剧情向，语气感情丰富有激情。奶油风居家背景，光线明亮偏暖色，身着 @图...
+     2. 原始prompt：无字幕，无背景音乐，核心风格：强互动、口语化、强共鸣，真实协调，零食种草剧情向，语气感情丰富有激情。居家背景，光线明亮偏暖色，特写，沉浸式吃播...
+     3. 原始prompt：居家背景 @图片6 ，女生 @图片9 穿 @图片8 、女生 @图片9 声音高昂活力兴奋热情期待。参考尺寸 巧乐脆小包装 7.5*4.5*2.5...
+
+2. CAT-002 | 通用视频编辑与参考驱动生成 (10 个查询)
+   定义: 生成或编辑不以商品、服务、品牌、机构或IP推广为核心目的的通用视频任务，重点是基于给定视频、图片或两者组合进行清理、替换、重绘、风格转换和参考驱动生成：包括去除水印、字幕、角标、贴纸、模糊块等画面杂质；在保留原视频主体动作、镜头运动、时序节奏、光影氛围、发丝/布料/物体运动轨迹、物理交互、背景关系或指定音频（人声、对白、音效）的前提下，替换人物、身份、服装、背景、道具、食物、产品等全部或局部元素；将参考图转化为视频并维持图中文字、排版或首帧内容；按参考视频的分镜、动作、姿势、风格、光线进行复刻或动画化重绘；调整音轨如去除背景音乐仅保留对话。该类目关注编辑/生成的一致性与可控性，而非营销卖点、转化话术或品牌推广目标。
+   边界: 包含无明确商业推广意图或仅能从素材表面判断为视觉处理的视频编辑与参考驱动生成，如去水印/去字幕/去贴纸、背景替换、人物/角色/食物/物品/产品替换、视频转动画、图生视频并保持文字或首帧、按参考视频动作/镜头/风格重绘、保留或剥离指定音轨等；产品或品牌素材出现在画面中时，只有当任务核心是视觉替换、一致性保持或风格转换，而不是卖点展示、口播种草、促销转化、机构宣传或IP推广时归入本类。不包含以商品、服务、品牌、机构或IP/虚拟角色推广转化为核心的短视频生成与编辑（归 CAT-001），不包含仅要求静态图片编辑/文案生成而非视频输出的任务，不包含以故事表达、知识科普或教程、纯艺术影像、直播录屏、通用无参考文生视频、无编辑/生成约束的简单裁剪拼接为主要目的的独立任务，也不包含明确违法、欺骗性身份冒用或未经授权商业代言等不应进入能力词表的任务。
+   样本:
+     1. 原始prompt：去除左下角水印，把视频的背景换成图片，其他不变
+任务意图：对参考视频进行编辑，去除左下角水印，将视频背景替换为指定参考图片，保留视频其余原有内...
+     2. 原始prompt：将 @图片1 变成视频，全程按照 @视频1 里的分镜人物动作分镜内容复刻视频，不出现字幕水印和贴纸和模糊区块，画面保持纯净无杂乱后期添加效果的...
+     3. 原始prompt：将 @视频1 中的人物和背景替换成 @图片1 ，使用的产品替换成 @图片2 产品侧面细节参考 @图片4 产品打开细节参考 @图片3 。产品大小...
+
+3. CAT-003 | 剧情短剧与影视化叙事视频生成 (23 个查询)
+   定义: 生成以故事情节、人物关系、情绪表达、动作场面或影视化叙事为核心目的的视频/片段，不以商品、服务、品牌、机构或IP推广转化为主要目标；可基于文本分镜、参考图（人物、场景、道具、前序画面）、参考音频（音色、台词、对白）等素材，输出真人写实、动画、二次元、3D CG、国漫、古风、玄幻、校园、职场等风格的多镜头短视频，保持角色ID、服装、场景、道具、光影、空间关系和时序一致，执行指定景别、运镜、剪辑转场、肢体动作、打斗/法术/物理特效、口型与台词/内心OS、环境音/音效，并可按要求实现无字幕、无水印、无BGM、仅保留指定声音或衔接前序剧情视频等控制。
+   边界: 包含非商业推广的剧情短剧、影视片段、分镜叙事、角色对话、内心OS、动作打斗、玄幻特效、校园生活、励志叙事、古风宫斗/宅斗、前序视频续写与衔接等任务；当剧情、人物、场景或IP仅作为故事表达载体，且没有明确商品/服务/品牌/机构推广、卖点展示、促销转化、留资获客或IP商业化推广目的时归入本类。若视频虽采用剧情短剧形式，但核心是产品种草、广告宣传片、服务推广、品牌心智、机构宣传、IP商业化推广或促销转化，应归 CAT-001；若任务核心是对已有视频/图片进行去水印、去字幕、背景/人物/产品替换、重绘、风格迁移、参考视频复刻编辑等视觉处理，而非原创剧情叙事生成，应归 CAT-002。不包含仅要求静态图片/文案生成、直播录屏、知识科普教程、纯无叙事氛围影像，以及明确违法、欺骗性身份冒用或未经授权商业代言等不应进入能力词表的任务。
+   样本:
+     1. 原始prompt：[不生成背景音乐，无字幕，无水印、画面干净、不生成任何文字叠加、纯画面、无背景音乐，人体结构正常，画面色彩明亮不暗沉，自然光影，风格为半写实高...
+     2. 原始prompt：##全局基础设定 本片所有人物背景必须真实，生成视频真人质感，不允许AI感，动漫感，3D感”，人物真实，面部表情自然 全局最高指令：人物动作必...
+     3. 原始prompt：[生成视频不带字幕，不带背景音乐] 真实摄影，真人写实 场景 @图片2 ，白天。 众人 @图片1 @图片5 @图片3 @图片4 @图片6 及一...
+======================================================================
+💾 保存结果到: output/
+   ✓ 详细结果: output/intents_smoke_clustering_20261118_133228.csv
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/main.py:111: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "created_at": datetime.utcnow(),
+   ✓ Mongo 落账: ai_agent.large_intent_cluster 213 行 (version=smoke_pf_final)
+   ✓ 摘要报告: output/intents_smoke_summary_20261118_133228.json
+
+💾 结果已保存:
+   详细数据: output/intents_smoke_clustering_20261118_133228.csv
+   摘要报告: output/intents_smoke_summary_20261118_133228.json
+
+🎉 TDRCluster聚类任务完成!
