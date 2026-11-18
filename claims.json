@@ -1,11 +1,11 @@
 [
   {
-    "package": "scripts/resume_run.py",
-    "claim": "要求8 物化入口预取提交：resume_run.py 在图实例化后、invoke 前，将快照队列全部任务提交 split_prefetch(单worker按序后台计算)。机械枚举(grep 证据): state['tasks'] 入口共三处——①tools.py:125 append(唯一调用者=基类_apply_decision:263, 其后269行已submit) ②graph.py:415 run()初始构造(基类413行已submit) ③resume物化(本改动补)——三处全覆盖后'入队即提交'不变量封闭; 此后 splitter 对积压任务 take 命中而非 direct 直算; serial 基线路径不受影响(纯 resume 脚本改动)",
+    "package": "core/graph.py,scripts/resume_run.py,scripts/jev_debt_audit.mjs,evidence/debt_audit.json",
+    "claim": "要求9 技术债全量清理：①消费代理 _PrefetchConsumeProxy 取代子类 splitter 覆写——复制块删除, 基类 splitter 原调用路径即消费面(take命中/未命中锁内直算), 单元验证命中不重复直算+委托✓ ②__import__ 内联×2 改顶部正规导入 ③resume_run 未用import/变量清理 ④JEV债务审计器入仓(机械枚举+逐条判定)。基类相对 d8af199 仍零删改(仅文件顶部import区+文件尾追加, diff为证)。清理后审计复跑: 违规5→1(唯一残留为冻结基类的配置默认读, 键已从全部配置移除)",
     "cards": [
       {
-        "sha256": "d99fc059d106c64235c89c13c2538d356dc060f666381086a76df1ed1e01e1b3",
-        "question": "要求8 = “预取要在续跑冷启动就生效（队列积压也提交预取）”，这是你的要求吗？",
+        "sha256": "eaea3d0d47ef929fb78b1a10a75cbf01aea21b03c5d553ef64b362eeb0f4b7e6",
+        "question": "要求9 = “审计出的技术债全量清理”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
