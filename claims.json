@@ -42,5 +42,16 @@
         "answer": "确认"
       }
     ]
+  },
+  {
+    "package": "scripts/resume_run.py",
+    "claim": "要求5 续跑路径：resume_run.py 从 CK 快照续跑——① config sha256 与快照不一致硬失败(--skip-config-check 显式豁免) ② 按 review_mode 选图类(two_phase=PrefetchTDRClusterGraph 子类, 否则基类) ③ invoke 前打印快照摘要(类目/待审/队列/残差)供肉眼核对 ④ 终态走 main.save_results 同一落账路径 ⑤ 不修改任何 serial 运行路径代码(纯新增脚本)",
+    "cards": [
+      {
+        "sha256": "cece632320a1c856f0bcfe8e98368ed56efe2775fe0d6fb8a784d997003089fe",
+        "question": "要求5 续跑路径：claim 是否如实转述？",
+        "answer": "确认"
+      }
+    ]
   }
 ]
