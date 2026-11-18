@@ -59,6 +59,12 @@ def main():
     )
     graph = cls(llm)
 
+    # 不变量: 任务入队即提交预取, 队列入口两处(split判决钩子/状态物化), 此处补物化入口
+    if getattr(graph, "split_prefetch", None) is not None and state["tasks"]:
+        for t in list(state["tasks"]):
+            graph.split_prefetch.submit(t, state["total_queries"])
+        print(f"⚡ 快照队列积压提交预取: {len(state['tasks'])} 个任务(单worker按序磨)")
+
     recursion_limit = CONFIG.get("system", {}).get("recursion_limit", 100)
     final_state = graph.graph.invoke(state, config={"recursion_limit": recursion_limit})
 
