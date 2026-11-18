@@ -599,11 +599,12 @@ class _ResilientLLMProxy:
                 )
             except Exception as exc:
                 networkish = any(m in str(exc).lower() for m in self._NETWORK_MARKERS)
-                if delay is None or not networkish:
+                if not networkish:
                     raise
+                if delay is None:
+                    raise NetworkFatigue(f"网络退避耗尽(窗口~10min): {str(exc)[:120]}") from exc
                 print(f"🌐 网络异常(第{attempt + 1}次), {delay}s 退避后重试: {str(exc)[:80]}")
                 self._sleep(delay)
-        raise NetworkFatigue("退避循环耗尽(不可达)")  # 防御性: 循环结构上不会到此
 
     def __getattr__(self, name):
         return getattr(self._inner, name)
