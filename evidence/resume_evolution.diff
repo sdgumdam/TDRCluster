@@ -1,0 +1,52 @@
+diff --git a/scripts/resume_run.py b/scripts/resume_run.py
+index 49a5aa2..366d898 100755
+--- a/scripts/resume_run.py
++++ b/scripts/resume_run.py
+@@ -23,7 +23,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ 
+ def main():
+     ap = argparse.ArgumentParser()
+-    ap.add_argument("--ckpt", required=True)
++    ap.add_argument("--ckpt", default=None, help="replay pkl 快照(与 --ck 二选一)")
++    ap.add_argument("--ck", default=None, help="全态 state CK json(水合入口, 与 --ckpt 二选一)")
++    ap.add_argument("--dataset", default=None, help="--ck 模式必填: 水合数据集名")
+     ap.add_argument("--version", default=None)
+     ap.add_argument("--skip-config-check", action="store_true")
+     args = ap.parse_args()
+@@ -31,16 +33,26 @@ def main():
+     import main as main_mod
+     from config.config_loader import CONFIG
+ 
+-    with open(args.ckpt, "rb") as f:
+-        snapshot = pickle.load(f)
+-    state = snapshot["state"]
+-
+-    cfg_path = os.environ.get("CONFIG_PATH", "")
+-    if not args.skip_config_check and cfg_path:
+-        cur = hashlib.sha256(Path(cfg_path).read_bytes()).hexdigest()
+-        if cur != snapshot["config_sha256"]:
+-            print(f"❌ 配置哈希失配: 快照 {snapshot['config_sha256'][:12]} vs 当前 {cur[:12]} — 续跑中止")
+-            sys.exit(2)
++    if args.ck:
++        assert args.dataset, "--ck 模式需要 --dataset"
++        from scripts.hydrate_state import hydrate
++
++        state, n_dec = hydrate(args.ck, args.dataset)
++        snapshot = {"state": state, "dataset": args.dataset, "log": args.ck}
++        args.skip_config_check = True  # CK 无配置哈希来源, 跳过并明示
++        print(f"水合载入: {args.ck} (历史决策 {n_dec}, 零重算)")
++    else:
++        assert args.ckpt, "--ckpt 或 --ck 必填其一"
++        with open(args.ckpt, "rb") as f:
++            snapshot = pickle.load(f)
++        state = snapshot["state"]
++
++        cfg_path = os.environ.get("CONFIG_PATH", "")
++        if not args.skip_config_check and cfg_path and snapshot.get("config_sha256"):
++            cur = hashlib.sha256(Path(cfg_path).read_bytes()).hexdigest()
++            if cur != snapshot["config_sha256"]:
++                print(f"❌ 配置哈希失配: 快照 {snapshot['config_sha256'][:12]} vs 当前 {cur[:12]} — 续跑中止")
++                sys.exit(2)
+ 
+     print(
+         f"快照: {args.ckpt} | 数据集 {snapshot['dataset']} | 源日志 {snapshot['log']}\n"
