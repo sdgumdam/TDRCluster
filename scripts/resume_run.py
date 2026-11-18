@@ -68,10 +68,8 @@ def main():
     recursion_limit = CONFIG.get("system", {}).get("recursion_limit", 100)
     final_state = graph.graph.invoke(state, config={"recursion_limit": recursion_limit})
 
-    from core.state import Query  # noqa: F401
 
     dataset_name = snapshot["dataset"]
-    queries_len = state["total_queries"]
     print(f"✅ 续跑完成: 类目 {len(final_state.get('categories', {}))} 残差 {len(final_state.get('residual_clusters', []))}")
 
     version = args.version or os.environ.get("CLUSTER_VERSION", "prefetch_resume_v1")

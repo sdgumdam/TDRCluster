@@ -1,0 +1,108 @@
+{
+  "generated_at": "2026-11-18T09:40:56.534Z",
+  "repo": "/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster",
+  "total_candidates": 7,
+  "violates": [
+    {
+      "file": "core/graph.py",
+      "line": 63,
+      "pattern": "dead_config_read",
+      "desc": "split_prefetch_workers 死配置链",
+      "code": "int(CONFIG.get(\"runtime\", {}).get(\"split_prefetch_workers\", 3) or 3),",
+      "verdict": "violates",
+      "confidence": 0.38,
+      "probabilities": {
+        "violates": 0.59,
+        "not_debt": 0.23,
+        "insufficient": 0.18
+      }
+    },
+    {
+      "file": "core/graph.py",
+      "line": 442,
+      "pattern": "inline_dunder_import",
+      "desc": "内联__import__(应顶部正规导入)",
+      "code": "_CLUSTERING_LOCK = __import__(\"threading\").Lock()",
+      "verdict": "violates",
+      "confidence": 0.73,
+      "probabilities": {
+        "violates": 0.82,
+        "not_debt": 0.12,
+        "insufficient": 0.06
+      }
+    },
+    {
+      "file": "core/graph.py",
+      "line": 487,
+      "pattern": "inline_dunder_import",
+      "desc": "内联__import__(应顶部正规导入)",
+      "code": "self._tree_run_id = __import__(\"os\").environ.get(\"TREE_RUN_ID\", \"run\")",
+      "verdict": "violates",
+      "confidence": 0.73,
+      "probabilities": {
+        "violates": 0.82,
+        "not_debt": 0.13,
+        "insufficient": 0.05
+      }
+    },
+    {
+      "file": "core/graph.py",
+      "line": 526,
+      "pattern": "dup_block_marker",
+      "desc": "注释承认的复制块",
+      "code": "\"\"\"覆写仅在有任务待切时生效; 返回块与基类尾部同构(基类无此缝可复用)。\"\"\"",
+      "verdict": "violates",
+      "confidence": 0.33,
+      "probabilities": {
+        "violates": 0.55,
+        "not_debt": 0.29,
+        "insufficient": 0.16
+      }
+    },
+    {
+      "file": "scripts/resume_run.py",
+      "line": 71,
+      "pattern": "noqa",
+      "desc": "noqa 压制(未用import嫌疑)",
+      "code": "from core.state import Query  # noqa: F401",
+      "verdict": "violates",
+      "confidence": 0.31,
+      "probabilities": {
+        "violates": 0.54,
+        "not_debt": 0.1,
+        "insufficient": 0.36
+      }
+    }
+  ],
+  "not_debt": [
+    {
+      "file": "scripts/resume_run.py",
+      "line": 63,
+      "pattern": "getattr_default",
+      "desc": "getattr默认None(接口存在性未显式)",
+      "code": "if getattr(graph, \"split_prefetch\", None) is not None and state[\"tasks\"]:",
+      "verdict": "not_debt",
+      "confidence": 0.38,
+      "probabilities": {
+        "violates": 0.15,
+        "not_debt": 0.59,
+        "insufficient": 0.26
+      }
+    },
+    {
+      "file": "services/embedding_service.py",
+      "line": 72,
+      "pattern": "getattr_default",
+      "desc": "getattr默认None(接口存在性未显式)",
+      "code": "if not self.client and not getattr(self, \"local_model\", None):",
+      "verdict": "not_debt",
+      "confidence": 0.44,
+      "probabilities": {
+        "violates": 0.13,
+        "not_debt": 0.63,
+        "insufficient": 0.24
+      }
+    }
+  ],
+  "insufficient": []
+}
