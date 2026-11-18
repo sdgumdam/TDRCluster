@@ -512,36 +512,54 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
         self._tree_run_id = os.environ.get("TREE_RUN_ID", "run")
         self._tree_dec_count = 0
 
-    def _dump_tree(self, state: GraphState, n_dec: int):
-        """中间分类树快照: 原子写(tmp+replace), 每次覆盖同 run 文件。"""
-        out_dir = Path(os.environ.get("TREE_CK_DIR", "ckpt/tree"))
+    def _dump_state_ck(self, state: GraphState, n_dec: int):
+        """全态检查点(id引用版, 几MB): 每决策原子写, 水合后零重算接管。
+        序列化契约: pydantic model_dump 为单一真源, queries 字段统一替换为 query_ids;
+        其余字段(含 judge/evidence_rounds/inspect 状态)全量保留。树JSON由此取代。"""
+        out_dir = Path(os.environ.get("CK_DIR", "ckpt/state"))
         out_dir.mkdir(parents=True, exist_ok=True)
-        tree = {
+
+        def cluster_dict(c: MicroCluster) -> Dict[str, Any]:
+            d = c.model_dump()
+            d["queries"] = [q.id for q in c.queries]
+            return d
+
+        ck = {
+            "format": "tdr-state-ck-v1",
             "decisions": n_dec,
+            "total_queries": state["total_queries"],
+            "min_cluster_size": state["min_cluster_size"],
+            "max_split_depth": state["max_split_depth"],
+            "split_review_budget": state.get("split_review_budget"),
+            "split_review_volume": state.get("split_review_volume"),
             "categories": {
                 cid: {
-                    "name": c.name,
-                    "definition": c.definition,
-                    "boundary_notes": c.boundary_notes,
-                    "query_ids": [q.id for q in c.queries],
+                    **{k: v for k, v in cat.model_dump().items() if k != "queries"},
+                    "query_ids": [q.id for q in cat.queries],
                 }
-                for cid, c in state["categories"].items()
+                for cid, cat in state["categories"].items()
             },
-            "pending_cluster_ids": [c.id for c in state.get("clusters_list", [])],
-            "queue_task_ids": [t.id for t in state.get("tasks", deque())],
-            "residual_ids": [c.id for c in state.get("residual_clusters", [])],
+            "clusters_list": [cluster_dict(c) for c in state.get("clusters_list", [])],
+            "residual_clusters": [cluster_dict(c) for c in state.get("residual_clusters", [])],
+            "tasks": [
+                {
+                    **{k: v for k, v in t.model_dump().items() if k != "queries"},
+                    "query_ids": [q.id for q in t.queries],
+                }
+                for t in state.get("tasks", deque())
+            ],
         }
-        tmp = out_dir / f"tree_{self._tree_run_id}.json.tmp"
-        tmp.write_text(json.dumps(tree, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(out_dir / f"tree_{self._tree_run_id}.json")
+        tmp = out_dir / f"state_{self._tree_run_id}.json.tmp"
+        tmp.write_text(json.dumps(ck, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(out_dir / f"state_{self._tree_run_id}.json")
 
     def _apply_decision(self, state: GraphState, current_cluster, decision):
         super()._apply_decision(state, current_cluster, decision)
         self._tree_dec_count += 1
         try:
-            self._dump_tree(state, self._tree_dec_count)
-        except Exception as exc:  # 树快照失败不阻断决策主路径
-            print(f"⚠️ 树快照失败: {exc}")
+            self._dump_state_ck(state, self._tree_dec_count)
+        except Exception as exc:  # 检查点失败不阻断决策主路径
+            print(f"⚠️ 状态CK失败: {exc}")
 
     def run(self, initial_queries: List[Query]) -> Dict[str, Any]:
         final_state = super().run(initial_queries)
