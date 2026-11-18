@@ -33,7 +33,7 @@
     ]
   },
   {
-    "package": "core/graph.py,core/prompts.py,evidence/graph_at_d8af199.py,evidence/prompts_at_d8af199.py,evidence/tdr_resume_smoke.log",
+    "package": "core/graph.py,core/prompts.py,evidence/graph_at_d8af199.py,evidence/prompts_at_d8af199.py,evidence/split_equivalence_test.log,scripts/split_equivalence_test.py,evidence/tdr_resume_smoke.log",
     "claim": "要求4 预取零决策语义差异：决策输入原语零改动——① reviewer prompt 装配(簇样本文本/证据轮次 create_cluster_display_dict, 分类树展示 create_category_display_dict, 动作集 allow_inspect, taxonomy_context) ② LLM 参数(temperature/model/messages) ③ dispatcher 决策字段(action/target_id/*_update/reason)——以上构造代码与 prompts.py 零改动(文件级 diff 为证)。预取产物与 serial 现算完全相同(同种子 random_state=42 纯函数, 同输入同输出), 经同一路径(clusters_list)进入评审; 全部决策输入与 serial 无差异。唯一差异: 计算时刻提前到评审等待期(后台单worker, 类级锁与 direct 兜底共用, numba 零并发)",
     "cards": [
       {

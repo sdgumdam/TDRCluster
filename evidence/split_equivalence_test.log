@@ -1,0 +1,75 @@
+✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/config/config_capability.yaml
+等价性测试: 快照=ckpt/replay_cap.pkl 任务数=3 total=190773
+开始物理切分: task=task-53c014f9, depth=1, queries=70900, min_cluster_size=95
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+   大噪声簇 mc-0001(29462例) 转入评审队列
+物理切分完成: review_clusters=56, residual_clusters=0
+  mc-0001: 29462 个查询, depth=1
+  mc-0002: 131 个查询, depth=1
+  mc-0003: 95 个查询, depth=1
+  mc-0004: 115 个查询, depth=1
+  mc-0005: 109 个查询, depth=1
+  mc-0006: 135 个查询, depth=1
+  mc-0007: 104 个查询, depth=1
+  mc-0008: 97 个查询, depth=1
+  mc-0009: 108 个查询, depth=1
+  mc-0010: 112 个查询, depth=1
+⚡ 预取切分 task-53c014f9: 70900 例 depth=1
+开始物理切分: task=task-53c014f9, depth=1, queries=70900, min_cluster_size=95
+⚡ 预取命中 task-53c014f9
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+   大噪声簇 mc-0057(29462例) 转入评审队列
+物理切分完成: review_clusters=56, residual_clusters=0
+  mc-0057: 29462 个查询, depth=1
+  mc-0058: 131 个查询, depth=1
+  mc-0059: 95 个查询, depth=1
+  mc-0060: 115 个查询, depth=1
+  mc-0061: 109 个查询, depth=1
+  mc-0062: 135 个查询, depth=1
+  mc-0063: 104 个查询, depth=1
+  mc-0064: 97 个查询, depth=1
+  mc-0065: 108 个查询, depth=1
+  mc-0066: 112 个查询, depth=1
+task task-53c014f9 (70900例 depth=1): 逐位相同 review簇数=56/56
+开始物理切分: task=task-f74acec4, depth=1, queries=186, min_cluster_size=95
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0113
+⚡ 预取切分 task-f74acec4: 186 例 depth=1
+⚡ 预取命中 task-f74acec4
+开始物理切分: task=task-f74acec4, depth=1, queries=186, min_cluster_size=95
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0114
+task task-f74acec4 (186例 depth=1): 逐位相同 review簇数=1/1
+开始物理切分: task=task-763a75fb, depth=1, queries=421, min_cluster_size=95
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+物理切分完成: review_clusters=2, residual_clusters=0
+  mc-0115: 179 个查询, depth=1
+  mc-0116: 242 个查询, depth=1
+⚡ 预取切分 task-763a75fb: 421 例 depth=1
+⚡ 预取命中 task-763a75fb
+开始物理切分: task=task-763a75fb, depth=1, queries=421, min_cluster_size=95
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+物理切分完成: review_clusters=2, residual_clusters=0
+  mc-0117: 179 个查询, depth=1
+  mc-0118: 242 个查询, depth=1
+task task-763a75fb (421例 depth=1): 逐位相同 review簇数=2/2
+
+结论: 全部任务 A==B 逐位相同
