@@ -33,7 +33,7 @@
     ]
   },
   {
-    "package": "core/graph.py,core/prompts.py,evidence/decision_primitives_vs_d8af199.diff,evidence/tdr_resume_smoke.log",
+    "package": "core/graph.py,core/prompts.py,evidence/decision_functions_vs_d8af199.md,evidence/tdr_resume_smoke.log",
     "claim": "要求4 预取零决策语义差异——决策输入原语清单零改动：① reviewer prompt 装配(簇样本文本/证据轮次 create_cluster_display_dict, 分类树展示 name·definition·boundary·计数 create_category_display_dict, 动作集含 allow_inspect, taxonomy_context) ② LLM 调用参数(temperature/model/messages) ③ dispatcher 消费的决策字段(action/target_id/name_update/definition_update/boundary_update/reason)。以上原语构造代码与 prompts.py 零改动(diff 为证)；预取产物仅被子类 splitter_node 消费(物理切分, 先于评审, 不进任何决策原语)；类级锁序列化 numba(后台+direct 共用), 单worker",
     "cards": [
       {
