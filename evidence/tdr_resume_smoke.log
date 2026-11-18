@@ -1,0 +1,87 @@
+✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster-prefetch/config/config_intent_resume.yaml
+快照: ckpt/replay_intent.pkl | 数据集 dataset_intent_dedup | 源日志 /tmp/tdr_intent_v2s.log
+类目 5 待审 55 队列 112 残差 0
+✓ LLM客户端初始化成功
+   模型: qwen3.8-omni-flash
+🔵 进入splitter节点
+   当前仍有 55 个micro-cluster待评审，跳过切分
+🟡 进入reviewer节点
+   评审 mc-0346: 191 个query, 剩余待审 54 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0346 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0346: merge
+   处理 mc-0346: merge
+已更新类别 CAT-004 的名称
+已更新类别 CAT-004 的定义
+已更新类别 CAT-004 的边界说明
+合并 mc-0346 -> CAT-004，现包含 15459 个查询
+   仍有 54 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0347: 201 个query, 剩余待审 53 个micro-cluster
+🔍 调用LLM reviewer...
+✅ LLM响应验证通过
+   ✓ mc-0347 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0347: split
+   处理 mc-0347: split
+创建重切分任务 task-6c91139d: 201 个查询, depth=1, reason=该簇中心意图是对参考视频中的指定商品、包装、胶囊、文字或台词进行局部替换并保持其余画面一致，可归入 CAT-001；但多样与边界样本中混入了独立生成类意图，如依兰花微距自然短片、口语化产品使用演示、手部微距拧盖交互、以首帧图片驱动的角色口播剧情广告等。这些样本并不以“参考视频指定元素替换”为核心，语义上跨越了商品演示生成、角色剧情表演和细粒度手部交互等不同能力需求，当前簇仍明显混合多个可复用意图，应退回进行下一轮物理拆分后再决定合并或新建。
+⚡ 预取切分 task-6c91139d: 201 例 depth=1
+开始物理切分: task=task-6c91139d, depth=1, queries=201, min_cluster_size=95
+   仍有 53 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0348: 342 个query, 剩余待审 52 个micro-cluster
+🔍 调用LLM reviewer...
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0001
+✅ LLM响应验证通过
+   ✓ mc-0348 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0348: split
+   处理 mc-0348: split
+创建重切分任务 task-148c65cb: 342 个查询, depth=1, reason=该微簇明显混合了多种不同任务意图：代表样本主要集中在无角色或弱角色的电影级场景氛围与运镜特效生成，如宇宙穿梭、黑洞/星云、流星爆炸、城市与山水航拍、抽象光效等；但多样与边界样本中还包含商品/品牌广告或产业宣传类需求（如宇航员开箱吐司产品、赛博朋克AR招商HUD与口播），以及角色情绪/剧情叙事类需求（如赛博朋克人物落寞对比、外星人战争推进地图）。这些意图分别更接近现有 CAT-003、CAT-004 或可能需要新建的场景特效类目，不应混在一个叶子类目中，因此需要退回做进一步物理拆分。
+⚡ 预取切分 task-148c65cb: 342 例 depth=1
+   仍有 52 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0349: 284 个query, 剩余待审 51 个micro-cluster
+开始物理切分: task=task-148c65cb, depth=1, queries=342, min_cluster_size=95🔍 调用LLM reviewer...
+
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0002
+✅ LLM响应验证通过
+   ✓ mc-0349 决策: split
+🟢 进入dispatcher节点
+   处理 mc-0349: split
+   处理 mc-0349: split
+创建重切分任务 task-1b6df40c: 284 个查询, depth=1, reason=该簇明显混合了多种不同任务意图：一类是无角色剧情、以电影级运镜和一镜到底揭示海洋养殖平台/工船的场景展示；一类是基于参考视频替换、增补元素或修改字幕/设备结构的视频编辑；另一类是由剧本、分镜、角色、商品或口播驱动的剧情表演、VLOG、产品变身广告。三者对应的能力需求和已有类别归属不同，需先进行物理拆分后再判断合并或新建。
+⚡ 预取切分 task-1b6df40c: 284 例 depth=1
+   仍有 51 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0350: 340 个query, 剩余待审 50 个micro-cluster
+🔍 调用LLM reviewer...
+开始物理切分: task=task-1b6df40c, depth=1, queries=284, min_cluster_size=95
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:4160: FutureWarning: compatibility_layout was not set, so UMAP is using the legacy (0.5.x) nearest-neighbor, initialization and layout pipeline. In a future release the default will change to compatibility_layout=False, which uses recursive initialization and the Adam optimizer and produces different embeddings. Set compatibility_layout=True to keep the current behavior and silence this warning, or compatibility_layout=False (or optimizer='adam') to adopt the new behavior now.
+  self.fit(X, y, ensure_all_finite, **kwargs)
+/Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/.venv/lib/python3.13/site-packages/umap/umap_.py:3099: UserWarning: n_jobs value -1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+HDBSCAN未找到稳定稠密簇，回退为单一micro-cluster: mc-0003
+✅ LLM响应验证通过
+   ✓ mc-0350 决策: merge
+🟢 进入dispatcher节点
+   处理 mc-0350: merge
+   处理 mc-0350: merge
+已更新类别 CAT-001 的名称
+已更新类别 CAT-001 的定义
+已更新类别 CAT-001 的边界说明
+合并 mc-0350 -> CAT-001，现包含 5632 个查询
+   仍有 50 个micro-cluster待评审，继续review
+🟡 进入reviewer节点
+   评审 mc-0351: 141 个query, 剩余待审 49 个micro-cluster
+🔍 调用LLM reviewer...
