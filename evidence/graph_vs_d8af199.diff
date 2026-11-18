@@ -1,8 +1,20 @@
 diff --git a/core/graph.py b/core/graph.py
-index aa17a18..03fd951 100644
+index aa17a18..49fa0f6 100644
 --- a/core/graph.py
 +++ b/core/graph.py
-@@ -431,3 +431,82 @@ class TDRClusterGraph:
+@@ -4,6 +4,11 @@ LangGraph流程编排模块
+ """
+ import re
+ from typing import List, Dict, Any, Tuple
++import json
++import os
++import threading
++from concurrent.futures import ThreadPoolExecutor
++from pathlib import Path
+ from collections import deque
+ 
+ from langgraph.graph import StateGraph, END
+@@ -431,3 +436,133 @@ class TDRClusterGraph:
          print(f"   最终类别数: {len(final_state.get('categories', {}))}")
          print(f"   残差簇数: {len(final_state.get('residual_clusters', []))}")
          return final_state
@@ -14,11 +26,9 @@ index aa17a18..03fd951 100644
 +    numba(UMAP/HDBSCAN)非线程安全: 类级锁序列化一切 perform_clustering 调用,
 +    主线程直算兜底共用同一把锁; 单worker(收益=评审期藏计算, 非切分间并行)。"""
 +
-+    _CLUSTERING_LOCK = __import__("threading").Lock()
++    _CLUSTERING_LOCK = threading.Lock()
 +
 +    def __init__(self, clustering_service, workers: int = 1):
-+        from concurrent.futures import ThreadPoolExecutor
-+
 +        del workers  # 单worker定死: 锁的存在就是为串行化; 形参保留兼容基类 __init__ 的调用
 +        self._svc = clustering_service
 +        self._pool = ThreadPoolExecutor(max_workers=1)
@@ -50,38 +60,91 @@ index aa17a18..03fd951 100644
 +        self._pool.shutdown(wait=False, cancel_futures=True)
 +
 +
++class _PrefetchConsumeProxy:
++    """切分消费代理: 基类 splitter 原样调用 perform_clustering, 本代理在其调用路径上
++    注入消费面——take 命中即返回预取结果, 未命中锁内直算。子类无需覆写 splitter,
++    复制块不存在。生产面(基类 submit 钩子)与消费面在此会合, 基类零改动。"""
++
++    def __init__(self, raw_service, prefetcher):
++        self._raw = raw_service
++        self._pf = prefetcher
++
++    def perform_clustering(self, task, total_queries: int):
++        hit = self._pf.take(task.id)
++        if hit is not None:
++            return hit
++        return self._pf.direct(task, total_queries)
++
++    def __getattr__(self, name):
++        return getattr(self._raw, name)
++
++
 +class PrefetchTDRClusterGraph(TDRClusterGraph):
-+    """two_phase 专用子类: 基类(d8af199)已含预取实例化与 _apply_decision/run 的 submit 钩子,
-+    子类只补基类缺失的两件——splitter 的 take/direct 消费钩子与运行结束 shutdown;
-+    本文件同名 SplitPrefetcher(锁版)在基类定义之后, 实例化时解析为锁版, 基类字节不动。
-+    review_mode != two_phase 时 main.py 必须实例化基类(基类不建预取器, 走原路径)。"""
++    """two_phase 专用子类: 基类(d8af199)零改动地获得预取与树快照——
++    __init__ 把 clustering_service 换成消费代理(基类 splitter/reviewer 的原调用路径
++    即消费面), 基类自带的 _apply_decision/run submit 钩子即生产面;
++    子类自身只有树快照覆写与结束 shutdown。
++    review_mode != two_phase 时 main.py 实例化基类(基类不建预取器, 走原路径)。"""
 +
-+    def splitter_node(self, state: GraphState) -> Dict[str, Any]:
-+        """覆写仅在有任务待切时生效; 返回块与基类尾部同构(基类无此缝可复用)。"""
-+        tasks = state.get("tasks", deque())
-+        if state.get("clusters_list") or not tasks:
-+            return super().splitter_node(state)
++    def __init__(self, llm_service):
++        super().__init__(llm_service)
++        self.clustering_service = _PrefetchConsumeProxy(
++            self.clustering_service, self.split_prefetch
++        )
++        self._tree_run_id = os.environ.get("TREE_RUN_ID", "run")
++        self._tree_dec_count = 0
 +
-+        current_task = tasks.popleft()
-+        pre = self.split_prefetch.take(current_task.id)
-+        if pre is None:
-+            pre = self.split_prefetch.direct(current_task, state["total_queries"])
-+        review_clusters, residual_clusters = pre
++    def _dump_state_ck(self, state: GraphState, n_dec: int):
++        """全态检查点(id引用版, 几MB): 每决策原子写, 水合后零重算接管。
++        序列化契约: pydantic model_dump 为单一真源, queries 字段统一替换为 query_ids;
++        其余字段(含 judge/evidence_rounds/inspect 状态)全量保留。树JSON由此取代。"""
++        out_dir = Path(os.environ.get("CK_DIR", "ckpt/state"))
++        out_dir.mkdir(parents=True, exist_ok=True)
 +
-+        all_residual_clusters = list(state.get("residual_clusters", []))
-+        all_residual_clusters.extend(residual_clusters)
-+        print(f"   切分完成: review={len(review_clusters)}, residual={len(residual_clusters)}")
-+        return {
-+            "tasks": tasks,
-+            "categories": state.get("categories", {}),
-+            "clusters_list": review_clusters,
-+            "current_cluster": None,
-+            "residual_clusters": all_residual_clusters,
++        def cluster_dict(c: MicroCluster) -> Dict[str, Any]:
++            d = c.model_dump()
++            d["queries"] = [q.id for q in c.queries]
++            return d
++
++        ck = {
++            "format": "tdr-state-ck-v1",
++            "decisions": n_dec,
++            "total_queries": state["total_queries"],
++            "min_cluster_size": state["min_cluster_size"],
++            "max_split_depth": state["max_split_depth"],
++            "split_review_budget": state.get("split_review_budget"),
++            "split_review_volume": state.get("split_review_volume"),
++            "categories": {
++                cid: {
++                    **{k: v for k, v in cat.model_dump().items() if k != "queries"},
++                    "query_ids": [q.id for q in cat.queries],
++                }
++                for cid, cat in state["categories"].items()
++            },
++            "clusters_list": [cluster_dict(c) for c in state.get("clusters_list", [])],
++            "residual_clusters": [cluster_dict(c) for c in state.get("residual_clusters", [])],
++            "tasks": [
++                {
++                    **{k: v for k, v in t.model_dump().items() if k != "queries"},
++                    "query_ids": [q.id for q in t.queries],
++                }
++                for t in state.get("tasks", deque())
++            ],
 +        }
++        tmp = out_dir / f"state_{self._tree_run_id}.json.tmp"
++        tmp.write_text(json.dumps(ck, ensure_ascii=False), encoding="utf-8")
++        tmp.replace(out_dir / f"state_{self._tree_run_id}.json")
++
++    def _apply_decision(self, state: GraphState, current_cluster, decision):
++        super()._apply_decision(state, current_cluster, decision)
++        self._tree_dec_count += 1
++        try:
++            self._dump_state_ck(state, self._tree_dec_count)
++        except Exception as exc:  # 检查点失败不阻断决策主路径
++            print(f"⚠️ 状态CK失败: {exc}")
 +
 +    def run(self, initial_queries: List[Query]) -> Dict[str, Any]:
 +        final_state = super().run(initial_queries)
 +        if self.split_prefetch is not None:
 +            self.split_prefetch.shutdown()
 +        return final_state
-+
