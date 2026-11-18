@@ -1,0 +1,11 @@
+✓ 配置文件加载成功: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/config/config.yaml
+dump 全态CK: 1.03s | CK大小: 6.1 MB
+📂 数据根目录: /Users/jingyuanrunsen/project/kuaizi_work_note/repos/TDRCluster/data
+W1118 18:08:24.619000 93945 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Could not reach the Hub (Cannot reach https://huggingface.co/api/models/BAAI/bge-small-zh-v1.5: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.). Using cached commit hash for 'BAAI/bge-small-zh-v1.5'.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 12823.30it/s]
+✓ 本地embedding模型就绪: BAAI/bge-small-zh-v1.5
+📂 成功加载数据集 dataset_intent_dedup: 190788 条记录
+✓ 准备完成 190788 个Query对象
+水合全耗时(含190k缓存装载): 20.7s | 决策349 类目5 待审2 队列129
+STATE CK REAL-SCALE ROUNDTRIP PASS (秒级恢复实证)
