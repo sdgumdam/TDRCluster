@@ -506,6 +506,8 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
 
     def __init__(self, llm_service):
         super().__init__(llm_service)
+        # omp级网络容灾: 网络退避重试/耗尽响亮死(BaseException穿透基类静默残差路径)
+        self.llm_service = _ResilientLLMProxy(self.llm_service)
         self.clustering_service = _PrefetchConsumeProxy(
             self.clustering_service, self.split_prefetch
         )
@@ -566,3 +568,42 @@ class PrefetchTDRClusterGraph(TDRClusterGraph):
         if self.split_prefetch is not None:
             self.split_prefetch.shutdown()
         return final_state
+
+
+class NetworkFatigue(BaseException):
+    """网络退避耗尽(omp级容灾窗口~10min仍不通)。继承 BaseException 以穿透基类
+    `except Exception` 的静默残差路径 —— 静默失败零容忍: 要么重试恢复, 要么响亮死。"""
+
+
+class _ResilientLLMProxy:
+    """并发线网络容灾(omp 级): 包住 llm_service.simple_call ——
+    网络类异常(超时/连接/5xx/429)指数退避 5s→15s→45s→135s→405s 重试(窗口~10min),
+    耗尽抛 NetworkFatigue(BaseException) → 进程死 → 哨兵报 → CK 水合 20s 重启;
+    非网络类异常立即透传(基类自身语义不变)。"""
+
+    _NETWORK_MARKERS = ("timeout", "timed out", "connection", "connect", "reset by peer",
+                        "broken pipe", "502", "503", "504", "429", "rate limit", "unreachable")
+    _BACKOFF_S = (5, 15, 45, 135, 405)
+
+    def __init__(self, inner, sleeper=None):
+        import time as _time
+
+        self._inner = inner
+        self._sleep = sleeper or _time.sleep
+
+    def simple_call(self, prompt, system_message=None, max_tokens=2000, timeout=None):
+        for attempt, delay in enumerate(self._BACKOFF_S + (None,)):
+            try:
+                return self._inner.simple_call(
+                    prompt, system_message=system_message, max_tokens=max_tokens, timeout=timeout
+                )
+            except Exception as exc:
+                networkish = any(m in str(exc).lower() for m in self._NETWORK_MARKERS)
+                if delay is None or not networkish:
+                    raise
+                print(f"🌐 网络异常(第{attempt + 1}次), {delay}s 退避后重试: {str(exc)[:80]}")
+                self._sleep(delay)
+        raise NetworkFatigue("退避循环耗尽(不可达)")  # 防御性: 循环结构上不会到此
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
