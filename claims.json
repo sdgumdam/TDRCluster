@@ -53,5 +53,16 @@
         "answer": "确认"
       }
     ]
+  },
+  {
+    "package": "core/tools.py",
+    "claim": "要求6 类目文本原文落日志：create 时打印 definition/boundary 原文、merge 时打印 name/definition/boundary 更新原文(各一行 [CK原文] 前缀)，纯 print 追加，不改变任何状态写入逻辑(直调冒烟已验: 5行全落+状态断言过, 冒烟先于本门执行已如实申报)；此后任何 run 的日志可无损重放, 重放脚本的 regen 替代仅适用于历史日志",
+    "cards": [
+      {
+        "sha256": "5b1d9401f8b54ce3a71a7772a55d147d0a4c9e331fef3bcd8cae88c133ec7310",
+        "question": "要求6（类目文本原文落日志）：是否如实转述你的要求？",
+        "answer": "确认"
+      }
+    ]
   }
 ]
