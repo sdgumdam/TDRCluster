@@ -1,11 +1,11 @@
 [
   {
-    "package": "core/graph.py",
-    "claim": "要求7 中间分类树保存：PrefetchTDRClusterGraph 子类新增 _apply_decision 覆写(调 super 后每决策一次)与 _dump_tree——轻量 JSON(categories 的 name/definition/boundary_notes/query_ids + 待审簇id/队列任务id/残差id, 不含 content)原子写(tmp+replace)至 TREE_CK_DIR, 失败仅警告不阻断决策；基类 TDRClusterGraph 相对 d8af199 仍零删改(graph 追加块内新增, serial 路径不实例化子类故不触发)",
+    "package": "scripts/resume_run.py",
+    "claim": "要求8 物化入口预取提交：resume_run.py 在图实例化后、invoke 前，将快照队列全部任务提交 split_prefetch(单worker按序后台计算)。机械枚举(grep 证据): state['tasks'] 入口共三处——①tools.py:125 append(唯一调用者=基类_apply_decision:263, 其后269行已submit) ②graph.py:415 run()初始构造(基类413行已submit) ③resume物化(本改动补)——三处全覆盖后'入队即提交'不变量封闭; 此后 splitter 对积压任务 take 命中而非 direct 直算; serial 基线路径不受影响(纯 resume 脚本改动)",
     "cards": [
       {
-        "sha256": "3b566b13836cacb6448ed1e3c7543d21bbcd4f52d3f6f6702ced18d5c562221d",
-        "question": "要求7 = “中间分类树要周期性落盘保存”，这是你的要求吗？",
+        "sha256": "d99fc059d106c64235c89c13c2538d356dc060f666381086a76df1ed1e01e1b3",
+        "question": "要求8 = “预取要在续跑冷启动就生效（队列积压也提交预取）”，这是你的要求吗？",
         "answer": "确认"
       }
     ]
