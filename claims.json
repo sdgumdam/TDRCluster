@@ -34,11 +34,11 @@
   },
   {
     "package": "core/graph.py,core/prompts.py,evidence/decision_functions_vs_d8af199.md,evidence/decision_primitives_vs_d8af199.diff,evidence/tdr_resume_smoke.log,evidence/tdr_smoke_pf_gate.log,evidence/prefetch_smoke_runs.md",
-    "claim": "要求4 预取零决策语义差异——决策输入原语清单零改动：① reviewer prompt 装配(簇样本文本/证据轮次 create_cluster_display_dict, 分类树展示 name·definition·boundary·计数 create_category_display_dict, 动作集含 allow_inspect, taxonomy_context) ② LLM 调用参数(temperature/model/messages) ③ dispatcher 消费的决策字段(action/target_id/name_update/definition_update/boundary_update/reason)。以上原语构造代码与 prompts.py 零改动(diff 为证)；预取产物仅被子类 splitter_node 消费(物理切分, 先于评审, 不进任何决策原语)；类级锁序列化 numba(后台+direct 共用), 单worker",
+    "claim": "要求4 预取零决策语义差异：决策输入原语零改动——① reviewer prompt 装配(簇样本文本/证据轮次 create_cluster_display_dict, 分类树展示 create_category_display_dict, 动作集 allow_inspect, taxonomy_context) ② LLM 参数(temperature/model/messages) ③ dispatcher 决策字段(action/target_id/*_update/reason)——以上构造代码与 prompts.py 零改动(文件级 diff 为证)。预取产物与 serial 现算完全相同(同种子 random_state=42 纯函数, 同输入同输出), 经同一路径(clusters_list)进入评审; 全部决策输入与 serial 无差异。唯一差异: 计算时刻提前到评审等待期(后台单worker, 类级锁与 direct 兜底共用, numba 零并发)",
     "cards": [
       {
-        "sha256": "a9e077669fafcd8242260f65117d72a5769404d715b4d65ba7b0ee41a3c2ea27",
-        "question": "要求4 终稿（原语清单版）：是否如实转述？",
+        "sha256": "17be4e3d63a0ef93788ebe77dc1483a0ee1dca4e6ba3351bdc7b70078de141f8",
+        "question": "要求4 v5：是否如实转述你的“零决策语义差异”？",
         "answer": "确认"
       }
     ]
