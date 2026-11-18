@@ -1,6 +1,6 @@
 [
   {
-    "package": "core/graph.py,scripts/resume_run.py,scripts/hydrate_state.py,evidence/state_ck_unit_test.log",
+    "package": "core/graph.py,scripts/resume_run.py,scripts/hydrate_state.py,evidence/state_ck_unit_test.log,evidence/state_ck_real_timing.log",
     "claim": "要求10 真检查点恢复：并发线(预取子类)每决策原子写全态 CK——id 引用版(类目含name/definition/boundary/成员query_id列表, 待审簇含id/depth/sample_texts/成员query_id, 队列任务含id/depth/parent/split_reason/成员query_id, 残差簇, 计数器split_review_volume与决策数), 几MB级JSON落CK_DIR; 水合加载器按 query_id 从 embedding 缓存重建 Query 对象(id/content/embedding)组装完整 GraphState; resume 载入后零重算(唯一计算=未预取任务的首切分), 崩溃恢复=秒级; serial 基线路径零改动(全部在子类与新脚本)",
     "cards": [
       {
