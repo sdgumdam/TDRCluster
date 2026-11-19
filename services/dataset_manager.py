@@ -285,7 +285,7 @@ class DatasetManager:
         progress = self._load_embedding_progress(dataset_name)
 
         # 批量处理
-        batch_size = 10
+        batch_size = int(self.config.get("embedding", {}).get("batch_size", 10) or 10)
         data_for_embedding = progress["data"]
         start_index = progress["next_index"]
         # 旧进度文件无 row_index 或越界: 只保留 next_index 之前的行并按行序排
